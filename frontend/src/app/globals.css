@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FAF8F4;
+  --foreground: #0E1B3D;
+  --primary: #E8831A;
+  --secondary: #0E1B3D;
+  --accent: #8B1A2E;
+  --card: #FFFFFF;
+  --border: #E5E7EB;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --font-heading: var(--font-outfit);
+  --font-body: var(--font-plus-jakarta-sans);
+  --font-bebas: var(--font-bebas-neue);
+  --font-dm: var(--font-dm-serif-display);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0E1B3D;
+    --foreground: #FAF8F4;
+    --card: #162447;
+    --border: #2B3A67;
+  }
+}
+
+html {
+  font-size: 17px; /* base bump — scales all rem/em values up */
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: 0.95rem; /* ~16px at the new base */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* Make Tailwind's tiny table text a bit more readable */
+th, td {
+  font-size: 0.82rem;
+}
+
