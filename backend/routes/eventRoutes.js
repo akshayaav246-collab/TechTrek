@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const {
-  getEvents, getEventById, createEvent, getMyEvents, getEventDashboard, markEventCompleted, getAdminAnalytics, attachHallLayout, getParticipants, exportCSV, updateEvent, deleteEvent, startCheckin
+  getEvents, getEventById, createEvent, getMyEvents, getEventDashboard, markEventCompleted, getAdminAnalytics, attachHallLayout, getParticipants, exportCSV, updateEvent, deleteEvent, startCheckin, getEventColleges
 } = require('../controllers/eventController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
 // Public
 router.get('/', getEvents);
+router.get('/colleges', getEventColleges); // colleges from upcoming events — used on signup
 
 // Admin-only routes (must come BEFORE /:id)
 router.post('/',                protect, authorizeRoles('admin', 'superAdmin'), createEvent);

@@ -65,7 +65,7 @@ export default function SeatSelectionClient({ eventId, layout }: Props) {
       });
       const data = await res.json();
       if (!res.ok) { setMsg({ type: 'err', text: data.message }); return; }
-      setMsg({ type: 'ok', text: `Seat ${selectedSeat} held for 30 minutes!` });
+      setMsg(null);
       setMySeat(data);
       setSelectedSeat(null);
       fetchSeats();
@@ -153,13 +153,13 @@ export default function SeatSelectionClient({ eventId, layout }: Props) {
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="font-extrabold text-xl text-gray-800">Seat <span className="text-[#E8831A]">{selectedSeat}</span></p>
-              <p className="text-xs text-gray-500">Will be held for 30 minutes</p>
+              <p className="text-xs text-gray-500">Will be held for 30 mins</p>
             </div>
             <button onClick={() => setSelectedSeat(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
           </div>
           <button onClick={holdSeat} disabled={loading}
             className="w-full bg-[#E8831A] hover:bg-[#d4741a] text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50">
-            {loading ? 'Holding…' : `⏱ Hold Seat ${selectedSeat} for 30 min`}
+            {loading ? 'Holding…' : `⏱ Hold Seat ${selectedSeat} for 30 mins`}
           </button>
         </div>
       )}

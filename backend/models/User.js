@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema({
   domain: { type: String, required: true },
   role: { type: String, enum: ['student', 'admin', 'superAdmin'], default: 'student' },
   isActive: { type: Boolean, default: true },
+  otpCode: { type: String },
+  otpExpiry: { type: Date },
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);

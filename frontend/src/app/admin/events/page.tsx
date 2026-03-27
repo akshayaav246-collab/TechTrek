@@ -301,7 +301,11 @@ export default function AdminEventsPage() {
                   const isDeleteLoading  = actionLoading === evt.eventId + '-delete';
                   const isDeleteConfirm  = confirmDelete === evt.eventId;
                   return (
-                    <div key={evt.eventId} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm relative">
+                    <div 
+                      key={evt.eventId} 
+                      onClick={() => router.push(`/admin/events/${evt.eventId}`)}
+                      className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm relative cursor-pointer active:bg-gray-50 transition-colors"
+                    >
                       <div className="flex justify-between items-start mb-2 border-b border-gray-50 pb-3">
                         <div className="pr-4 min-w-0">
                           <h3 className="font-bold text-[#0E1B3D] text-lg leading-tight mb-1 truncate">{evt.name}</h3>
@@ -325,7 +329,7 @@ export default function AdminEventsPage() {
                         </div>
                       </div>
                       
-                      <div className="flex gap-2 border-t border-gray-50 pt-3 mt-1">
+                      <div className="flex gap-2 border-t border-gray-50 pt-3 mt-1" onClick={e => e.stopPropagation()}>
                         <button onClick={e => toggleCheckin(evt, e)} disabled={!!isCheckinLoading}
                           className={`flex-1 rounded-lg border py-2.5 flex items-center justify-center gap-1.5 transition-all text-sm font-bold shadow-sm ${evt.checkInStarted ? 'bg-emerald-50 border-emerald-300 text-emerald-600' : 'bg-white border-gray-200 text-gray-600'}`}>
                           {isCheckinLoading ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : evt.checkInStarted ? <><CheckCircleIcon className="w-4 h-4"/> Stop Check-In</> : <><ClockIcon className="w-4 h-4"/> Start Check-In</>}

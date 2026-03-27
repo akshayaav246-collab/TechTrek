@@ -10,6 +10,7 @@ const checkinRoutes = require('./routes/checkinRoutes');
 const superadminRoutes = require('./routes/superadminRoutes');
 const hallRoutes = require('./routes/hallRoutes');
 const seatRoutes = require('./routes/seatRoutes');
+const { startSeatReminderCron } = require('./services/seatCron');
 
 // Connect to Database
 connectDB();
@@ -31,6 +32,9 @@ app.use('/api/seats', seatRoutes);
 app.get('/', (req, res) => {
   res.send('TechTrek API is running...');
 });
+
+// Start our cron services
+startSeatReminderCron();
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

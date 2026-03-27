@@ -32,7 +32,7 @@ export default function EventsPage() {
 
   // Filter logic
   const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
+    const filtered = events.filter((event) => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = event.name.toLowerCase().includes(searchLower) || 
                             event.collegeName.toLowerCase().includes(searchLower);
@@ -40,6 +40,14 @@ export default function EventsPage() {
       const matchesCity = cityFilter === 'ALL' || event.city === cityFilter;
       
       return matchesSearch && matchesStatus && matchesCity;
+    });
+
+    return filtered.sort((a, b) => {
+      if (a.status === 'UPCOMING' && b.status !== 'UPCOMING') return -1;
+      if (a.status !== 'UPCOMING' && b.status === 'UPCOMING') return 1;
+      if (a.status === 'COMPLETED' && b.status !== 'COMPLETED') return 1;
+      if (a.status !== 'COMPLETED' && b.status === 'COMPLETED') return -1;
+      return 0;
     });
   }, [events, searchTerm, statusFilter, cityFilter]);
 
@@ -66,7 +74,9 @@ export default function EventsPage() {
           <div className="bg-card border border-border p-4 md:p-6 rounded-2xl shadow-sm mb-12 flex flex-col md:flex-row gap-4 items-center justify-between">
             {/* Search Input */}
             <div className="w-full md:w-1/3 relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/50">🔍</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/50">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </span>
               <Input 
                 placeholder="Search college or event name..." 
                 value={searchTerm}
@@ -123,7 +133,9 @@ export default function EventsPage() {
             </div>
           ) : (
             <div className="text-center py-20 bg-black/5 rounded-3xl border border-dashed border-border max-w-3xl mx-auto">
-              <span className="text-5xl mb-4 block opacity-50">🔍</span>
+              <div className="flex justify-center mb-4 opacity-50">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </div>
               <h3 className="text-2xl font-bold text-secondary mb-2">No events found</h3>
               <p className="text-foreground/70 text-lg">Try adjusting your search terms or filters to find what you're looking for.</p>
               <button 

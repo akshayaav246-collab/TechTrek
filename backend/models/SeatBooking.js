@@ -6,6 +6,7 @@ const seatBookingSchema = new mongoose.Schema({
   userId:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status:  { type: String, enum: ['temp_hold', 'confirmed'], default: 'temp_hold' },
   expiresAt: { type: Date, default: null },             // null = never expires (confirmed)
+  reminderSent: { type: Boolean, default: false },
 }, { timestamps: true });
 
 // Compound unique index — one booking per seat per event

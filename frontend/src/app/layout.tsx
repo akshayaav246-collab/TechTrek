@@ -27,7 +27,7 @@ const dmSerifDisplay = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: "TechTrek ⚡",
+  title: "TechTrek",
   description: "GKT Event Management System",
 };
 

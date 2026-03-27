@@ -39,7 +39,6 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
             <span className={`inline-block px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${event.status === 'UPCOMING' ? 'bg-primary text-white shadow-md' : 'bg-white/20 text-white/80'}`}>
               {event.status}
             </span>
-            <span className="text-white/60 text-sm font-bold tracking-widest uppercase bg-black/20 px-4 py-1.5 rounded-lg border border-white/10">ID: {event.eventId}</span>
           </div>
           <h1 className="font-heading font-extrabold text-5xl md:text-7xl mb-6 leading-tight tracking-tight drop-shadow-md">{event.name}</h1>
           <p className="text-2xl md:text-3xl text-white/80 mb-10 font-medium">{event.collegeName} <span className="text-primary mx-3 opacity-50">•</span> {event.city}</p>

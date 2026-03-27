@@ -15,16 +15,15 @@ export function Footer() {
           <ul className="space-y-2 text-sm text-white/80">
             <li><Link href="/" className="hover:text-primary transition-colors">Home</Link></li>
             <li><Link href="/events" className="hover:text-primary transition-colors">Events</Link></li>
-            <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-            <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
           </ul>
         </div>
         <div>
           <h4 className="font-bold mb-4 font-heading">Contact Info</h4>
           <ul className="space-y-2 text-sm text-white/80">
-            <li>info@techtrek.example.com</li>
-            <li>+1 (555) 123-4567</li>
-            <li>123 Tech Lane, Innovation City, CA 94000</li>
+            <li>Global Knowledge Technologies</li>
+            <li>+91 8043003611</li>
+            <li>genquiry@globalknowledgetech.com</li>
+            <li>1st Floor, 81, The Hulkul, 37, Lavelle Road, Shanthala Nagar, Bangalore - 560001</li>
           </ul>
         </div>
       </div>

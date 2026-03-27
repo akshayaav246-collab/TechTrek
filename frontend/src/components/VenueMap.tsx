@@ -81,9 +81,9 @@ export default function VenueMap({
     return false;
   };
 
-  const seatSize = compact ? 16 : 20;
-  const textSize = compact ? '6px' : '7px';
-  const gap = compact ? 2 : 2;
+  const seatSize = compact ? 24 : 32;
+  const textSize = compact ? '10px' : '12px';
+  const gap = compact ? 3 : 4;
 
   const StageBar = () => (
     <div className="flex items-center justify-center w-full my-3">

@@ -313,4 +313,29 @@ const startCheckin = async (req, res) => {
   }
 };
 
-module.exports = { getEvents, getEventById, createEvent, getMyEvents, getEventDashboard, markEventCompleted, getAdminAnalytics, attachHallLayout, getParticipants, exportCSV, updateEvent, deleteEvent, startCheckin };
+// @desc  Get distinct colleges from UPCOMING events (public — used on signup form)
+// @route GET /api/events/colleges
+const getEventColleges = async (req, res) => {
+  try {
+    const events = await Event.find({ status: 'UPCOMING' })
+      .select('collegeName city collegeDomain -_id')
+      .lean();
+
+    // Deduplicate by collegeName
+    const seen = new Set();
+    const colleges = [];
+    for (const e of events) {
+      if (!seen.has(e.collegeName)) {
+        seen.add(e.collegeName);
+        colleges.push({ collegeName: e.collegeName, city: e.city, collegeDomain: e.collegeDomain });
+      }
+    }
+
+    res.json(colleges);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getEvents, getEventById, createEvent, getMyEvents, getEventDashboard, markEventCompleted, getAdminAnalytics, attachHallLayout, getParticipants, exportCSV, updateEvent, deleteEvent, startCheckin, getEventColleges };
+

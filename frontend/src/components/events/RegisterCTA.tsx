@@ -90,7 +90,7 @@ export function RegisterCTA({
       });
       const data = await res.json();
       if (!res.ok) { setSeatMsg(data.message); } else {
-        setMySeat(data); fetchSeats(); setSeatMsg(`Seat ${seatId} held for 30 minutes!`);
+        setMySeat(data); fetchSeats(); setSeatMsg('');
       }
     } catch { setSeatMsg('Network error'); }
     finally { setSeatLoading(false); }
@@ -272,7 +272,7 @@ export function RegisterCTA({
             <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 sticky top-0 bg-white rounded-t-3xl z-10">
               <div>
                 <h2 className="font-heading font-bold text-xl text-gray-900 flex items-center gap-2"><SeatIcon className="w-5 h-5 text-[#E8831A]" /> Choose Your Seat</h2>
-                <p className="text-xs text-gray-500 mt-0.5">{hallLayout.hall_name} · Click a seat to hold it for 30 minutes</p>
+                <p className="text-xs text-gray-500 mt-0.5">{hallLayout.hall_name}</p>
               </div>
               <button onClick={() => setShowSeatModal(false)} className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
                 <XIcon className="w-4 h-4" />

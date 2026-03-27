@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CalendarIcon, ClockIcon, NewsIcon } from '@/components/Icons';
 
 interface RSSItem {
   title: string;
@@ -67,8 +68,8 @@ export default async function IndustryAwareness() {
       {/* SECTION 4 - LIVE ROTATING INDUSTRY NEWS (TICKER) */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-20">
         <div className="bg-secondary rounded-xl flex items-center overflow-hidden border border-white/10 shadow-lg">
-           <div className="bg-secondary text-primary font-bold px-6 py-4 flex-shrink-0 z-10 font-heading tracking-widest uppercase text-sm border-r border-white/10">
-             📰 Industry Pulse
+           <div className="bg-secondary text-primary font-bold px-6 py-4 flex-shrink-0 z-10 font-heading tracking-widest uppercase text-sm border-r border-white/10 flex items-center gap-2">
+             <NewsIcon className="w-5 h-5" /> Industry Pulse
            </div>
            
            <div className="flex-grow overflow-hidden relative group">
@@ -117,8 +118,8 @@ export default async function IndustryAwareness() {
                 A deep dive into how generative AI and cloud infrastructure will reshape entry-level careers.
               </p>
               <div className="flex justify-between items-center text-xs text-foreground/70 font-medium border-t border-border pt-4 mb-6">
-                <div className="flex items-center gap-1"><span className="text-base text-foreground">📅</span> Mar 12, 10:00 AM</div>
-                <div className="flex items-center gap-1"><span className="text-base text-foreground">⏱</span> 45 mins</div>
+                <div className="flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-foreground/60" /> Mar 12, 10:00 AM</div>
+                <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-foreground/60" /> 45 mins</div>
               </div>
               <button className="w-full bg-secondary text-white py-3 rounded-xl font-bold text-sm hover:bg-primary transition-colors group/btn">
                 Explore Talk <span className="ml-1 transition-transform inline-block group-hover/btn:translate-x-1">→</span>
@@ -148,8 +149,8 @@ export default async function IndustryAwareness() {
                 Why the next wave of unicorn startups will focus on sustainability and renewable resources.
               </p>
               <div className="flex justify-between items-center text-xs text-foreground/70 font-medium border-t border-border pt-4 mb-6">
-                <div className="flex items-center gap-1"><span className="text-base text-foreground">📅</span> Mar 12, 11:30 AM</div>
-                <div className="flex items-center gap-1"><span className="text-base text-foreground">⏱</span> 30 mins</div>
+                <div className="flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-foreground/60" /> Mar 12, 11:30 AM</div>
+                <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-foreground/60" /> 30 mins</div>
               </div>
               <button className="w-full bg-secondary text-white py-3 rounded-xl font-bold text-sm hover:bg-primary transition-colors group/btn">
                 Explore Talk <span className="ml-1 transition-transform inline-block group-hover/btn:translate-x-1">→</span>
@@ -179,8 +180,8 @@ export default async function IndustryAwareness() {
                 Understanding the architecture behind India's digital payment revolution and future projections.
               </p>
               <div className="flex justify-between items-center text-xs text-foreground/70 font-medium border-t border-border pt-4 mb-6">
-                <div className="flex items-center gap-1"><span className="text-base text-foreground">📅</span> Mar 12, 02:00 PM</div>
-                <div className="flex items-center gap-1"><span className="text-base text-foreground">⏱</span> 60 mins</div>
+                <div className="flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-foreground/60" /> Mar 12, 02:00 PM</div>
+                <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-foreground/60" /> 60 mins</div>
               </div>
               <button className="w-full bg-secondary text-white py-3 rounded-xl font-bold text-sm hover:bg-primary transition-colors group/btn">
                 Explore Talk <span className="ml-1 transition-transform inline-block group-hover/btn:translate-x-1">→</span>

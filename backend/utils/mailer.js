@@ -92,4 +92,64 @@ const sendRegistrationEmail = async ({ name, email, eventName, venue, dateTime, 
   });
 };
 
-module.exports = { sendWelcomeEmail, sendRegistrationEmail };
+/**
+ * Send OTP email for password reset
+ */
+const sendOtpEmail = async ({ name, email, otp }) => {
+  await transporter.sendMail({
+    from: `"TechTrek" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: '🔐 Your TechTrek Password Reset OTP',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#FAF8F4;border-radius:16px;overflow:hidden;">
+        <div style="background:#0E1B3D;padding:40px;text-align:center;">
+          <h1 style="color:#E8831A;margin:0;font-size:32px;letter-spacing:-1px;">TechTrek</h1>
+          <p style="color:rgba(255,255,255,0.6);margin:8px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:2px;">Password Reset</p>
+        </div>
+        <div style="padding:40px;">
+          <h2 style="color:#0E1B3D;">Hi ${name},</h2>
+          <p style="color:#555;line-height:1.7;">We received a request to reset your password. Use the OTP below to proceed. This code is valid for <strong>10 minutes</strong>.</p>
+          <div style="text-align:center;margin:32px 0;">
+            <div style="display:inline-block;background:#0E1B3D;color:#E8831A;font-size:36px;font-weight:bold;letter-spacing:12px;padding:20px 36px;border-radius:16px;box-shadow:0 4px 16px rgba(14,27,61,0.2);">
+              ${otp}
+            </div>
+          </div>
+          <p style="color:#999;font-size:13px;text-align:center;">If you didn't request this, you can safely ignore this email. Your password will not change.</p>
+        </div>
+        <div style="padding:24px 40px;border-top:1px solid #eee;text-align:center;">
+          <p style="color:#999;font-size:12px;margin:0;">© ${new Date().getFullYear()} TechTrek · Empowering India's Next Generation</p>
+        </div>
+      </div>
+    `,
+  });
+};
+
+/**
+ * Send a reminder email for seat hold
+ */
+const sendSeatReminderEmail = async ({ name, email, seatId, eventName }) => {
+  await transporter.sendMail({
+    from: `"TechTrek" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `⚠️ Action Required: Your Seat ${seatId} for ${eventName} expires in 10 minutes!`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#FAF8F4;border-radius:16px;overflow:hidden;">
+        <div style="background:#0E1B3D;padding:40px;text-align:center;">
+          <h1 style="color:#E8831A;margin:0;font-size:32px;letter-spacing:-1px;">TechTrek</h1>
+          <p style="color:rgba(255,255,255,0.6);margin:8px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:2px;">Seat Hold Expiring</p>
+        </div>
+        <div style="padding:40px;">
+          <h2 style="color:#0E1B3D;">Hi ${name},</h2>
+          <p style="color:#555;line-height:1.7;">Just a quick reminder that your hold on <strong>Seat ${seatId}</strong> for <strong>${eventName}</strong> will expire in exactly 10 minutes.</p>
+          <p style="color:#555;line-height:1.7;">Please complete your booking/payment before the time runs out, otherwise the seat will be released back to the public pool.</p>
+          <a href="http://localhost:3000/events" style="display:inline-block;margin-top:24px;background:#E8831A;color:white;padding:14px 32px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:15px;">Complete Booking →</a>
+        </div>
+        <div style="padding:24px 40px;border-top:1px solid #eee;text-align:center;">
+          <p style="color:#999;font-size:12px;margin:0;">© ${new Date().getFullYear()} TechTrek · Empowering India's Next Generation</p>
+        </div>
+      </div>
+    `,
+  });
+};
+
+module.exports = { sendWelcomeEmail, sendRegistrationEmail, sendOtpEmail, sendSeatReminderEmail };
