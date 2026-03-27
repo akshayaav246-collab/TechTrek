@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CalendarIcon, ClockIcon, NewsIcon } from '@/components/Icons';
+import { SpeakerCarousel } from './SpeakerCarousel';
 
 interface RSSItem {
   title: string;
@@ -9,7 +10,7 @@ interface RSSItem {
 const FALLBACK_ITEMS = [
   { title: "India's startup ecosystem crosses 1.4 lakh registered firms", label: "Startup", color: "text-green-400" },
   { title: "PLI scheme drives manufacturing output up 22% in Q3 FY25", label: "Policy", color: "text-blue-400" },
-  { title: "Nifty IT index rallies 3.8% on strong Q4 guidance", label: "Markets", color: "text-orange-400" },
+  { title: "Nifty IT index rallies 3.8% on strong Q4 guidance", label: "Markets", color: "text-[#e8631a]" },
   { title: "India's EV sector sees record ₹9,000 Cr investment in 2025", label: "Tech", color: "text-purple-400" },
   { title: "UPI transactions hit ₹20 lakh crore in March 2025", label: "Policy", color: "text-blue-400" },
   { title: "India climbs to 39th in Global Innovation Index 2024", label: "Policy", color: "text-blue-400" }
@@ -19,26 +20,33 @@ function categorizeHeadline(title: string) {
   const t = title.toLowerCase();
   if (t.includes('startup') || t.includes('unicorn') || t.includes('funding')) return { label: 'Startup', color: 'text-green-400' };
   if (t.includes('policy') || t.includes('government') || t.includes('scheme') || t.includes('pli')) return { label: 'Policy', color: 'text-blue-400' };
-  if (t.includes('market') || t.includes('nifty') || t.includes('sensex') || t.includes('gdp')) return { label: 'Markets', color: 'text-orange-400' };
+  if (t.includes('market') || t.includes('nifty') || t.includes('sensex') || t.includes('gdp')) return { label: 'Markets', color: 'text-[#e8631a]' };
   if (t.includes('tech') || t.includes('ai') || t.includes('ev') || t.includes('digital')) return { label: 'Tech', color: 'text-purple-400' };
   return { label: 'Industry', color: 'text-foreground/50' };
 }
 
 async function fetchTickers() {
   try {
-    const feedUrl = encodeURIComponent('https://news.google.com/rss/search?q=Technology+AI+India&hl=en-IN&gl=IN&ceid=IN:en');
-    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${feedUrl}`, { cache: 'no-store' });
+    const feedUrl = encodeURIComponent('https://news.google.com/rss/search?q="Information+Technology"+OR+"Artificial+Intelligence"+OR+"Emerging+Technology"+India+when:1d&hl=en-IN&gl=IN&ceid=IN:en');
+    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${feedUrl}`, { 
+      next: { revalidate: 86400 } // Revalidate every 24 hours as requested
+    });
     if (!res.ok) {
       console.error('RSS fetch failed:', res.status);
       return FALLBACK_ITEMS;
     }
     const data = await res.json();
     if (data.items && data.items.length > 0) {
-      return data.items.map((item: RSSItem) => ({
+      let parsed = data.items.map((item: RSSItem) => ({
         title: item.title.split(' - ')[0], // Clean suffix usually attached by Google News
         link: item.link,
         ...categorizeHeadline(item.title)
       }));
+      if (parsed.length < 5) {
+        // Pad with fallbacks to guarantee at least 5 items
+        parsed = [...parsed, ...FALLBACK_ITEMS.slice(0, 5 - parsed.length)];
+      }
+      return parsed;
     }
   } catch (error) {
     // return fallbacks safely without crashing
@@ -49,8 +57,19 @@ async function fetchTickers() {
 export default async function IndustryAwareness() {
   const tickerItems = await fetchTickers();
 
-  // Create infinite array by duplicating items to ensure marquee fills the screen
-  const marqueeItems = [...tickerItems, ...tickerItems];
+  // Create an array long enough to fill the screen
+  let baseBlock = [...tickerItems];
+  while (baseBlock.length < 15) { // increased length to ensure it overflows the screen easily
+    baseBlock = [...baseBlock, ...tickerItems];
+  }
+  
+  // Create infinite array by duplicating the base block once
+  // This ensures that when the animation reaches 50% (the end of the first half),
+  // it seamlessly loops back to the beginning.
+  const marqueeItems = [...baseBlock, ...baseBlock];
+  
+  // Calculate dynamic duration based on the number of items in the base block (much faster speed)
+  const duration = baseBlock.length * 6.0;
 
   return (
     <section className="bg-background text-foreground font-body w-full overflow-hidden pt-12">
@@ -73,11 +92,12 @@ export default async function IndustryAwareness() {
            </div>
            
            <div className="flex-grow overflow-hidden relative group">
-             <div className="flex whitespace-nowrap animate-marquee group-hover:[animation-play-state:paused] items-center py-4">
+             <div 
+               className="flex w-max whitespace-nowrap animate-marquee group-hover:[animation-play-state:paused] items-center py-4"
+               style={{ animationDuration: `${duration}s` }}
+             >
                {marqueeItems.map((item, idx) => (
-                 <div key={idx} className="flex items-center text-white/90 px-8 text-sm md:text-base border-r border-white/10 last:border-r-0">
-                   <span className={`mr-2 ${item.color}`}>●</span>
-                   <span className={`font-bold mr-2 opacity-90 uppercase tracking-widest text-[11px] ${item.color}`}>{item.label}</span>
+                 <div key={idx} className="flex items-center text-white/90 px-8 text-sm md:text-base">
                    {item.link ? (
                      <a href={item.link} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors hover:underline">
                         {item.title}
@@ -85,6 +105,7 @@ export default async function IndustryAwareness() {
                    ) : (
                      <span>{item.title}</span>
                    )}
+                   <span className="ml-8 text-white/20">|</span>
                  </div>
                ))}
              </div>
@@ -94,102 +115,7 @@ export default async function IndustryAwareness() {
 
       {/* SECTION 2 - TED-STYLE TALK CARDS */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          
-          {/* Card 1 */}
-          <div className="flex flex-col rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-border group bg-card">
-            <div className="bg-secondary/95 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden h-48 stretch-0">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white font-bebas text-3xl mb-4 relative z-10 shadow-md">
-                RS
-              </div>
-              <h3 className="text-white font-bold text-xl relative z-10">Rohit Sharma</h3>
-              <p className="text-white/70 text-sm mt-1 relative z-10">VP Strategy, Infosys</p>
-            </div>
-            <div className="p-8 flex-grow flex flex-col">
-              <div className="flex gap-2 mb-4">
-                <span className="text-[10px] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2 py-1 rounded">#TechIndustry</span>
-                <span className="text-[10px] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2 py-1 rounded">#AI</span>
-              </div>
-              <h4 className="font-dm font-bold text-xl leading-snug mb-3 text-secondary">
-                "India's $1T Tech Dream: What It Means for the Class of 2026"
-              </h4>
-              <p className="text-foreground/70 text-sm mb-6 flex-grow">
-                A deep dive into how generative AI and cloud infrastructure will reshape entry-level careers.
-              </p>
-              <div className="flex justify-between items-center text-xs text-foreground/70 font-medium border-t border-border pt-4 mb-6">
-                <div className="flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-foreground/60" /> Mar 12, 10:00 AM</div>
-                <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-foreground/60" /> 45 mins</div>
-              </div>
-              <button className="w-full bg-secondary text-white py-3 rounded-xl font-bold text-sm hover:bg-primary transition-colors group/btn">
-                Explore Talk <span className="ml-1 transition-transform inline-block group-hover/btn:translate-x-1">→</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Card 2 */}
-          <div className="flex flex-col rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-border group bg-card">
-            <div className="bg-secondary/95 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden h-48 stretch-0">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white font-bebas text-3xl mb-4 relative z-10 shadow-md">
-                PK
-              </div>
-              <h3 className="text-white font-bold text-xl relative z-10">Priya Krishnan</h3>
-              <p className="text-white/70 text-sm mt-1 relative z-10">Founder, GreenLeaf Ventures</p>
-            </div>
-            <div className="p-8 flex-grow flex flex-col">
-              <div className="flex gap-2 mb-4">
-                <span className="text-[10px] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2 py-1 rounded">#GreenEnergy</span>
-                <span className="text-[10px] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2 py-1 rounded">#Startups</span>
-              </div>
-              <h4 className="font-dm font-bold text-xl leading-snug mb-3 text-secondary">
-                "Climate Tech is the New Software: Building Green in Bharat"
-              </h4>
-              <p className="text-foreground/70 text-sm mb-6 flex-grow">
-                Why the next wave of unicorn startups will focus on sustainability and renewable resources.
-              </p>
-              <div className="flex justify-between items-center text-xs text-foreground/70 font-medium border-t border-border pt-4 mb-6">
-                <div className="flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-foreground/60" /> Mar 12, 11:30 AM</div>
-                <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-foreground/60" /> 30 mins</div>
-              </div>
-              <button className="w-full bg-secondary text-white py-3 rounded-xl font-bold text-sm hover:bg-primary transition-colors group/btn">
-                Explore Talk <span className="ml-1 transition-transform inline-block group-hover/btn:translate-x-1">→</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="flex flex-col rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-border group bg-card">
-            <div className="bg-secondary/95 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden h-48 stretch-0">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150"></div>
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white font-bebas text-3xl mb-4 relative z-10 shadow-md">
-                AM
-              </div>
-              <h3 className="text-white font-bold text-xl relative z-10">Arjun Mehta</h3>
-              <p className="text-white/70 text-sm mt-1 relative z-10">Head of FinTech, HDFC Bank</p>
-            </div>
-            <div className="p-8 flex-grow flex flex-col">
-              <div className="flex gap-2 mb-4">
-                <span className="text-[10px] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2 py-1 rounded">#FinTech</span>
-                <span className="text-[10px] font-bold tracking-widest uppercase text-primary bg-primary/10 px-2 py-1 rounded">#UPI</span>
-              </div>
-              <h4 className="font-dm font-bold text-xl leading-snug mb-3 text-secondary">
-                "From UPI to Neo-Banks: Cracking the Next Decade of Money"
-              </h4>
-              <p className="text-foreground/70 text-sm mb-6 flex-grow">
-                Understanding the architecture behind India's digital payment revolution and future projections.
-              </p>
-              <div className="flex justify-between items-center text-xs text-foreground/70 font-medium border-t border-border pt-4 mb-6">
-                <div className="flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-foreground/60" /> Mar 12, 02:00 PM</div>
-                <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-foreground/60" /> 60 mins</div>
-              </div>
-              <button className="w-full bg-secondary text-white py-3 rounded-xl font-bold text-sm hover:bg-primary transition-colors group/btn">
-                Explore Talk <span className="ml-1 transition-transform inline-block group-hover/btn:translate-x-1">→</span>
-              </button>
-            </div>
-          </div>
-
-        </div>
+        <SpeakerCarousel />
       </div>
 
       <style>{`
@@ -199,6 +125,9 @@ export default async function IndustryAwareness() {
         }
         .animate-marquee {
           animation: marquee 20s linear infinite;
+        }
+        .group:hover .animate-marquee {
+          animation-play-state: paused !important;
         }
       `}</style>
     </section>

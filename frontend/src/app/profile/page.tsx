@@ -123,9 +123,9 @@ export default function ProfilePage() {
               {/* Banner */}
               <div className="h-20 bg-secondary relative overflow-hidden">
                 <svg className="absolute inset-0 w-full h-full opacity-10" viewBox="0 0 400 80" preserveAspectRatio="none">
-                  <circle cx="50" cy="40" r="70" stroke="#E8831A" strokeWidth="1" fill="none"/>
+                  <circle cx="50" cy="40" r="70" stroke="#e8631a" strokeWidth="1" fill="none"/>
                   <circle cx="370" cy="40" r="55" stroke="white" strokeWidth="1" fill="none"/>
-                  <circle cx="200" cy="80" r="80" stroke="#E8831A" strokeWidth="0.5" fill="none"/>
+                  <circle cx="200" cy="80" r="80" stroke="#e8631a" strokeWidth="0.5" fill="none"/>
                 </svg>
               </div>
               

@@ -119,7 +119,7 @@ export default function SeatSelectionClient({ eventId, layout }: Props) {
         {[
           { label: 'Total Seats', val: total, color: 'text-gray-700' },
           { label: 'Booked', val: statAvail, color: 'text-red-600' },
-          { label: 'On Hold', val: seatStatuses.filter(s=>s.status==='temp_hold').length, color: 'text-orange-500' },
+          { label: 'On Hold', val: seatStatuses.filter(s=>s.status==='temp_hold').length, color: 'text-[#e8631a]' },
           { label: 'Available', val: total - seatStatuses.length, color: 'text-emerald-600' },
         ].map(s => (
           <div key={s.label} className="flex-1 min-w-[100px] bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm text-center">
@@ -152,13 +152,13 @@ export default function SeatSelectionClient({ eventId, layout }: Props) {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="font-extrabold text-xl text-gray-800">Seat <span className="text-[#E8831A]">{selectedSeat}</span></p>
+              <p className="font-extrabold text-xl text-gray-800">Seat <span className="text-[#e8631a]">{selectedSeat}</span></p>
               <p className="text-xs text-gray-500">Will be held for 30 mins</p>
             </div>
             <button onClick={() => setSelectedSeat(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
           </div>
           <button onClick={holdSeat} disabled={loading}
-            className="w-full bg-[#E8831A] hover:bg-[#d4741a] text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50">
+            className="w-full bg-[#e8631a] hover:bg-[#d4741a] text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50">
             {loading ? 'Holding…' : `⏱ Hold Seat ${selectedSeat} for 30 mins`}
           </button>
         </div>
@@ -168,7 +168,7 @@ export default function SeatSelectionClient({ eventId, layout }: Props) {
       {mySeat && (
         <div className={`rounded-2xl p-5 border ${mySeat.status === 'confirmed' ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
           <p className="font-extrabold text-lg text-gray-800 mb-1">
-            {mySeat.status === 'confirmed' ? '✅' : '⏱'} Your Seat: <span className="text-[#E8831A]">{mySeat.seatId}</span>
+            {mySeat.status === 'confirmed' ? '✅' : '⏱'} Your Seat: <span className="text-[#e8631a]">{mySeat.seatId}</span>
           </p>
           {mySeat.status === 'temp_hold' && mySeat.expiresAt && (
             <p className="text-sm text-gray-600 mb-4">
@@ -197,7 +197,7 @@ export default function SeatSelectionClient({ eventId, layout }: Props) {
 
       {!user && (
         <div className="text-center py-4 text-sm text-gray-500">
-          <a href="/login" className="text-[#E8831A] font-bold hover:underline">Log in</a> to select and hold a seat.
+          <a href="/login" className="text-[#e8631a] font-bold hover:underline">Log in</a> to select and hold a seat.
         </div>
       )}
     </div>

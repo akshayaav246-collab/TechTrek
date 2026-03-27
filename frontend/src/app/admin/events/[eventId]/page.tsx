@@ -101,14 +101,14 @@ export default function AdminEventDashboard() {
       <Link href="/admin/events" className="text-gray-400 text-xs hover:text-gray-600 inline-flex items-center gap-1 mb-2">
         <ArrowLeftIcon className="w-3 h-3" /> All Events
       </Link>
-      <p className="text-[#E8831A] text-[10px] font-bold uppercase tracking-widest mb-1">Event Dashboard</p>
+      <p className="text-[#e8631a] text-[10px] font-bold uppercase tracking-widest mb-1">Event Dashboard</p>
       {loading ? (
         <div className="h-8 w-60 bg-gray-200 rounded-lg animate-pulse"/>
       ) : (
         <span className="font-heading font-extrabold text-2xl text-[#0E1B3D]">{eventInfo?.name}</span>
       )}
       {eventInfo && (
-        <p className="text-gray-400 text-xs mt-1 flex items-center gap-1.5 font-medium"><LocationIcon className="w-3.5 h-3.5 text-[#E8831A]" /> {eventInfo.venue} <span className="text-gray-300 mx-1">•</span> ID: {eventInfo.eventId}</p>
+        <p className="text-gray-400 text-xs mt-1 flex items-center gap-1.5 font-medium"><LocationIcon className="w-3.5 h-3.5 text-[#e8631a]" /> {eventInfo.venue} <span className="text-gray-300 mx-1">•</span> ID: {eventInfo.eventId}</p>
       )}
     </div>
   );
@@ -146,7 +146,7 @@ export default function AdminEventDashboard() {
         ) : stats && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard label="Total Capacity" val={eventInfo?.capacity ?? 0} color="text-[#0E1B3D]"/>
-            <StatCard label="Registered" val={stats.registered} color="text-[#E8831A]"/>
+            <StatCard label="Registered" val={stats.registered} color="text-[#e8631a]"/>
             <StatCard label="Waitlisted" val={stats.waitlisted} color="text-amber-500"/>
             <StatCard label="Checked-In" val={stats.checkedIn} color="text-emerald-600"/>
             {eventInfo?.status === 'COMPLETED' ? (
@@ -165,7 +165,7 @@ export default function AdminEventDashboard() {
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by name or email…"
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#E8831A] bg-white"/>
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#e8631a] bg-white"/>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 hide-scrollbar shrink-0 w-[calc(100%+2rem)] sm:w-auto">
             {(['ALL','REGISTERED','WAITLISTED','CHECKED_IN'] as const).map(f => (
@@ -191,7 +191,7 @@ export default function AdminEventDashboard() {
               <div className="text-center py-16">
                 <SearchIcon className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                 <p className="text-gray-400 font-medium">No participants found</p>
-                {search && <button onClick={() => setSearch('')} className="mt-3 text-[#E8831A] text-sm font-bold hover:underline">Clear search</button>}
+                {search && <button onClick={() => setSearch('')} className="mt-3 text-[#e8631a] text-sm font-bold hover:underline">Clear search</button>}
               </div>
             ) : (
               // Inner Fragment replacing direct render
@@ -270,7 +270,7 @@ export default function AdminEventDashboard() {
             <div className="px-5 py-3.5 border-t border-gray-50 flex items-center justify-between">
               <p className="text-xs text-gray-400">Showing <span className="font-bold text-gray-600">{filtered.length}</span> of <span className="font-bold text-gray-600">{participants.length}</span> participants</p>
               <button onClick={downloadCSV} disabled={downloading}
-                className="text-xs font-bold text-[#E8831A] hover:underline flex items-center gap-1 disabled:opacity-50">
+                className="text-xs font-bold text-[#e8631a] hover:underline flex items-center gap-1 disabled:opacity-50">
                 <DownloadIcon className="w-3 h-3" /> Export filtered list
               </button>
             </div>

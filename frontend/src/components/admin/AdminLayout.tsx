@@ -39,7 +39,7 @@ export default function AdminLayout({ children, title, headerActions }: { childr
       `}>
         <div className="mb-10 flex justify-between items-start">
           <div>
-            <p className="text-[#E8831A] text-[15px] font-bold uppercase tracking-widest">⚡TechTrek</p>
+            <p className="text-[#e8631a] text-[15px] font-bold uppercase tracking-widest">⚡TechTrek</p>
             <p className="text-white font-heading font-extrabold text-lg mt-1 leading-tight">GKT Command<br/>Center</p>
           </div>
           <button onClick={closeSidebar} className="lg:hidden text-gray-400 hover:text-white p-1">

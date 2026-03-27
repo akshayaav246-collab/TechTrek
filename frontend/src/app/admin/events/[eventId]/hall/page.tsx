@@ -56,7 +56,7 @@ export default function AttachHallPage() {
       {/* Sidebar */}
       <aside className="w-60 bg-[#0E1B3D] text-white flex flex-col py-8 px-5 shrink-0">
         <div className="mb-10">
-          <p className="text-[#E8831A] text-xs font-bold uppercase tracking-widest">TechTrek</p>
+          <p className="text-[#e8631a] text-xs font-bold uppercase tracking-widest">TechTrek</p>
           <p className="text-white font-heading font-extrabold text-lg mt-1">Admin Panel</p>
         </div>
         <nav className="flex flex-col gap-1">
@@ -85,7 +85,7 @@ export default function AttachHallPage() {
             {halls.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-gray-500 mb-4">No saved hall layouts yet.</p>
-                <Link href="/admin/create-event" className="text-[#E8831A] font-bold hover:underline">
+                <Link href="/admin/create-event" className="text-[#e8631a] font-bold hover:underline">
                   Create an event with a hall layout first →
                 </Link>
               </div>
@@ -95,9 +95,9 @@ export default function AttachHallPage() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Select Hall Layout</label>
                   <div className="space-y-3">
                     {halls.map(h => (
-                      <label key={h._id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedHallId === h._id ? 'border-[#E8831A] bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <label key={h._id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedHallId === h._id ? 'border-[#e8631a] bg-[#e8631a]/10' : 'border-gray-200 hover:border-gray-300'}`}>
                         <input type="radio" name="hall" value={h._id} checked={selectedHallId === h._id}
-                          onChange={() => handleSelect(h._id)} className="accent-[#E8831A]"/>
+                          onChange={() => handleSelect(h._id)} className="accent-[#e8631a]"/>
                         <div>
                           <p className="font-bold text-[#0E1B3D]">{h.hall_name}</p>
                           <p className="text-xs text-gray-500">{h.total_rows} rows × {h.seats_per_row} seats/row · Stage: {h.stage_position} · Entry: {h.entry_points}</p>
@@ -121,7 +121,7 @@ export default function AttachHallPage() {
                 )}
 
                 <button onClick={handleAttach} disabled={!selectedHallId || submitting}
-                  className="w-full bg-[#E8831A] hover:bg-[#d4741a] text-white font-bold py-3 rounded-xl transition-all disabled:opacity-40">
+                  className="w-full bg-[#e8631a] hover:bg-[#d4741a] text-white font-bold py-3 rounded-xl transition-all disabled:opacity-40">
                   {submitting ? 'Attaching…' : '🏛️ Attach Hall Layout to Event'}
                 </button>
               </>

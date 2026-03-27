@@ -64,7 +64,7 @@ export default function AdminCheckInPage() {
       {/* Sidebar */}
       <aside className="w-60 bg-[#0E1B3D] text-white flex flex-col py-8 px-5 shrink-0">
         <div className="mb-10">
-          <p className="text-[#E8831A] text-[10px] font-bold uppercase tracking-widest">TechTrek</p>
+          <p className="text-[#e8631a] text-[10px] font-bold uppercase tracking-widest">TechTrek</p>
           <p className="text-white font-heading font-extrabold text-lg mt-1">GKT Command<br/>Center</p>
         </div>
         <nav className="flex flex-col gap-1 flex-1">
@@ -86,7 +86,7 @@ export default function AdminCheckInPage() {
       <main className="flex-1 flex flex-col items-center justify-center px-8 py-10">
         <div className="w-full max-w-md">
           <div className="mb-6 text-center">
-            <span className="inline-block bg-[#E8831A]/15 text-[#E8831A] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">Scan Mode</span>
+            <span className="inline-block bg-[#e8631a]/15 text-[#e8631a] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">Scan Mode</span>
             <h1 className="font-heading font-extrabold text-3xl text-[#0E1B3D]">QR Check-In</h1>
             <p className="text-gray-400 text-sm mt-1">Point camera at participant&apos;s QR code</p>
           </div>
@@ -128,7 +128,7 @@ export default function AdminCheckInPage() {
             <div className="p-5 pt-0">
               <textarea value={manual} onChange={e => setManual(e.target.value)} rows={3}
                 placeholder='Paste QR JSON payload here…'
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-xs font-mono text-gray-700 outline-none focus:border-[#E8831A] resize-none mb-3"/>
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-xs font-mono text-gray-700 outline-none focus:border-[#e8631a] resize-none mb-3"/>
               <button onClick={() => processQR(manual.trim())} disabled={!manual.trim()}
                 className="w-full bg-[#0E1B3D] text-white font-bold py-2.5 rounded-xl text-sm hover:bg-[#1a2d5a] transition-colors disabled:opacity-40">
                 Submit

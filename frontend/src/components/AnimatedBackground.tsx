@@ -4,18 +4,18 @@ import { motion } from "motion/react";
 
 export function AnimatedBackground() {
   const circles = [
-    { x: "20%", y: "30%", size: 8, color: "bg-[#E8831A]/20" },
+    { x: "20%", y: "30%", size: 8, color: "bg-[#e8631a]/20" },
     { x: "80%", y: "20%", size: 6, color: "bg-white/10" },
-    { x: "85%", y: "70%", size: 10, color: "bg-[#E8831A]/20" },
+    { x: "85%", y: "70%", size: 10, color: "bg-[#e8631a]/20" },
     { x: "10%", y: "80%", size: 7, color: "bg-white/10" },
-    { x: "50%", y: "90%", size: 6, color: "bg-[#E8831A]/20" },
+    { x: "50%", y: "90%", size: 6, color: "bg-[#e8631a]/20" },
     { x: "95%", y: "40%", size: 8, color: "bg-white/10" },
   ];
 
   const squares = [
-    { x: "25%", y: "85%", size: 12, color: "border-[#E8831A]/20" },
+    { x: "25%", y: "85%", size: 12, color: "border-[#e8631a]/20" },
     { x: "70%", y: "75%", size: 10, color: "border-white/10" },
-    { x: "90%", y: "50%", size: 14, color: "border-[#E8831A]/20" },
+    { x: "90%", y: "50%", size: 14, color: "border-[#e8631a]/20" },
   ];
 
   // Fixed positions to avoid Math.random() hydration mismatch in Next.js
@@ -44,7 +44,7 @@ export function AnimatedBackground() {
         <motion.div
            // ...
           key={`vline-${i}`}
-          className="absolute h-full w-px bg-gradient-to-b from-transparent via-[#E8831A]/10 to-transparent"
+          className="absolute h-full w-px bg-gradient-to-b from-transparent via-[#e8631a]/10 to-transparent"
           style={{ left: `${8 + i * 8}%` }}
           initial={{ opacity: 0 }}
           animate={{ opacity: [0.05, 0.2, 0.05] }}
@@ -94,21 +94,21 @@ export function AIVisualization() {
         >
           {/* Outer Ring */}
           <motion.div
-            className="w-48 h-48 rounded-full border-4 border-[#E8831A]/20"
+            className="w-48 h-48 rounded-full border-4 border-[#e8631a]/20"
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 3, repeat: Infinity }}
           />
 
           {/* Middle Ring */}
           <motion.div
-            className="absolute inset-6 rounded-full border-4 border-[#E8831A]/30"
+            className="absolute inset-6 rounded-full border-4 border-[#e8631a]/30"
             animate={{ scale: [1, 0.9, 1] }}
             transition={{ duration: 2.5, repeat: Infinity }}
           />
 
           {/* Inner Core */}
           <motion.div
-            className="absolute inset-12 rounded-full bg-[#E8831A]/20 backdrop-blur-sm flex items-center justify-center"
+            className="absolute inset-12 rounded-full bg-[#e8631a]/20 backdrop-blur-sm flex items-center justify-center"
             animate={{
               boxShadow: [
                 "0 0 20px rgba(232,131,26,0.2)",
@@ -119,7 +119,7 @@ export function AIVisualization() {
             transition={{ duration: 2, repeat: Infinity }}
           >
             <svg
-              className="w-16 h-16 text-[#E8831A]"
+              className="w-16 h-16 text-[#e8631a]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -140,7 +140,7 @@ export function AIVisualization() {
           return (
             <motion.div
               key={i}
-              className="absolute w-4 h-4 bg-[#E8831A] rounded-full"
+              className="absolute w-4 h-4 bg-[#e8631a] rounded-full"
               style={{
                 left: "50%",
                 top: "50%",
@@ -173,7 +173,7 @@ export function AIVisualization() {
         {[...Array(4)].map((_, i) => (
           <motion.div
             key={`line-${i}`}
-            className="absolute w-1 bg-gradient-to-b from-transparent via-[#E8831A] to-transparent"
+            className="absolute w-1 bg-gradient-to-b from-transparent via-[#e8631a] to-transparent"
             style={{
               left: `${25 + i * 20}%`,
               height: "100%",

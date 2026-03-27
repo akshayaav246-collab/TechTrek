@@ -105,8 +105,8 @@ export default function CheckInPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-[#E8831A]/20 border border-[#E8831A]/30 rounded-full px-4 py-2 mb-4">
-            <span className="text-[#E8831A] font-bold text-xs uppercase tracking-widest">Coordinator Panel</span>
+          <div className="inline-flex items-center gap-2 bg-[#e8631a]/20 border border-[#e8631a]/30 rounded-full px-4 py-2 mb-4">
+            <span className="text-[#e8631a] font-bold text-xs uppercase tracking-widest">Coordinator Panel</span>
           </div>
           <h1 className="font-heading font-extrabold text-3xl text-white">QR Check-In Scanner</h1>
           <p className="text-white/50 text-sm mt-2">Point camera at student&apos;s QR code to check them in</p>
@@ -162,10 +162,10 @@ export default function CheckInPage() {
               value={manualInput}
               onChange={e => setManualInput(e.target.value)}
               placeholder='{"userId":"...","eventId":"...","registrationId":"...","secureHash":"..."}'
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-xs font-mono placeholder-white/30 outline-none focus:border-[#E8831A] transition-colors resize-none mb-3"
+              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-xs font-mono placeholder-white/30 outline-none focus:border-[#e8631a] transition-colors resize-none mb-3"
               rows={4}
             />
-            <button type="submit" className="w-full bg-[#E8831A] text-white font-bold py-3 rounded-xl hover:bg-[#d4741a] transition-colors">
+            <button type="submit" className="w-full bg-[#e8631a] text-white font-bold py-3 rounded-xl hover:bg-[#d4741a] transition-colors">
               Submit
             </button>
           </form>

@@ -55,12 +55,12 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         {/* Minimal staff header for event browsing */}
         <div className="fixed top-0 left-0 right-0 z-50 bg-[#0E1B3D] text-white px-6 py-3 flex justify-between items-center shadow-lg">
           <span className="font-heading font-bold text-base text-white">
-            <span className="text-[#E8831A]">TechTrek</span>
+            <span className="text-[#e8631a]">TechTrek</span>
             <span className="text-white/50 text-xs font-normal ml-2 uppercase tracking-widest">Events Preview</span>
           </span>
           <button
             onClick={() => router.push(user.role === 'superAdmin' ? '/superadmin' : '/admin')}
-            className="bg-[#E8831A] text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#d4741a] transition-colors"
+            className="bg-[#e8631a] text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#d4741a] transition-colors"
           >
             ← Back to Dashboard
           </button>

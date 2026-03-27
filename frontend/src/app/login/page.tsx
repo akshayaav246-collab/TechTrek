@@ -5,7 +5,6 @@ import ReactDOM from 'react-dom';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AnimatedBackground } from '@/components/AnimatedBackground';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,17 +28,17 @@ function Field({
   pattern?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/60">{label}</label>
+    <div className="flex flex-col gap-1">
+      <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">{label}</label>
       <input
         type={type} name={name} value={value} onChange={onChange}
         placeholder={placeholder} required
         maxLength={maxLength}
         inputMode={inputMode}
         pattern={pattern}
-        className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D] font-medium placeholder-[#0E1B3D]/30 outline-none focus:border-[#E8831A] transition-colors text-sm"
+        className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D] font-bold placeholder-[#0E1B3D]/40 outline-none focus:border-[#e8631a] transition-colors text-[13px]"
       />
-      {hint && <span className="text-[10px] text-[#0E1B3D]/40">{hint}</span>}
+      {hint && <span className="text-[10px] text-[#0E1B3D]/50 ml-1">{hint}</span>}
       {children}
     </div>
   );
@@ -164,14 +163,14 @@ function CollegeInput({ value, onChange }: {
     : null;
 
   return (
-    <div className="flex flex-col gap-1.5" ref={wrapRef}>
-      <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/60">College Name</label>
+    <div className="flex flex-col gap-1" ref={wrapRef}>
+      <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">College Name</label>
       {loadingColleges ? (
-        <div className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D]/30 text-sm animate-pulse">
+        <div className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D]/30 text-[13px] animate-pulse">
           Loading colleges…
         </div>
       ) : colleges.length === 0 ? (
-        <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-xl px-4 py-3 text-amber-700 text-sm font-medium">
+        <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-xl px-4 py-3 text-amber-700 text-[13px] font-medium">
           No upcoming events found. Signup will open when events are announced.
         </div>
       ) : (
@@ -186,11 +185,13 @@ function CollegeInput({ value, onChange }: {
             required
             autoComplete="off"
             readOnly={false}
-            className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D] font-medium placeholder-[#0E1B3D]/30 outline-none focus:border-[#E8831A] transition-colors text-sm cursor-pointer"
+            className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D] font-bold placeholder-[#0E1B3D]/40 outline-none focus:border-[#e8631a] transition-colors text-[13px] cursor-pointer"
           />
-          <span className="text-[10px] text-[#0E1B3D]/40">
-            Only colleges with upcoming TechTrek events are available.
-          </span>
+          {query.trim().length > 0 && filtered.length === 0 && (
+            <span className="text-[10px] text-red-500 font-medium ml-1">
+              No matching colleges with upcoming events found.
+            </span>
+          )}
           {dropdown}
         </>
       )}
@@ -276,7 +277,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
           {(['email','otp','reset'] as FpStep[]).map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                step === s ? 'bg-[#E8831A] text-white' :
+                step === s ? 'bg-[#e8631a] text-white' :
                 (step === 'otp' && i === 0) || (step === 'reset' && i <= 1) || step === 'done' ? 'bg-[#0E1B3D] text-white' :
                 'bg-[#E5E7EB] text-[#0E1B3D]/40'
               }`}>{i + 1}</div>
@@ -301,7 +302,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
             <Field label="Registered Email" type="email" name="fp_email" value={email}
               onChange={e => setEmail(e.target.value)} placeholder="student@college.ac.in" />
             <button type="submit" disabled={loading}
-              className="w-full bg-[#E8831A] hover:bg-[#d4741a] text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-60">
+              className="w-full bg-[#e8631a] hover:bg-[#d4741a] text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-60">
               {loading ? 'Sending OTP…' : 'Send OTP →'}
             </button>
           </form>
@@ -320,11 +321,11 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
                 type="text" inputMode="numeric" value={otp} maxLength={6}
                 onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="123456" required
-                className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D] font-bold text-center text-2xl tracking-[0.5em] outline-none focus:border-[#E8831A] transition-colors"
+                className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D] font-bold text-center text-2xl tracking-[0.5em] outline-none focus:border-[#e8631a] transition-colors"
               />
             </div>
             <button type="submit" disabled={loading}
-              className="w-full bg-[#E8831A] hover:bg-[#d4741a] text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-60">
+              className="w-full bg-[#e8631a] hover:bg-[#d4741a] text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-60">
               {loading ? 'Verifying…' : 'Verify OTP →'}
             </button>
             <button type="button" onClick={() => { setStep('email'); setError(''); }}
@@ -346,7 +347,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
             <Field label="Confirm Password" type="password" name="fp_confirmpwd" value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)} placeholder="Repeat password" />
             <button type="submit" disabled={loading}
-              className="w-full bg-[#E8831A] hover:bg-[#d4741a] text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-60">
+              className="w-full bg-[#e8631a] hover:bg-[#d4741a] text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-60">
               {loading ? 'Resetting…' : 'Reset Password →'}
             </button>
           </form>
@@ -385,9 +386,9 @@ function GlobeLogo({ className = "" }: { className?: string }) {
       <path d="M 75 18 Q 100 50 75 82" stroke="#0a1628" strokeWidth="8" strokeLinecap="round" />
       <defs>
         <radialGradient id="goldGrad" cx="0.4" cy="0.4" r="0.6">
-          <stop offset="0%" stopColor="#fff2c8"/>
-          <stop offset="40%" stopColor="#d4a843"/>
-          <stop offset="100%" stopColor="#876718"/>
+          <stop offset="0%" stopColor="#ffb38a"/>
+          <stop offset="40%" stopColor="#e8631a"/>
+          <stop offset="100%" stopColor="#a6420e"/>
         </radialGradient>
       </defs>
     </svg>
@@ -396,8 +397,7 @@ function GlobeLogo({ className = "" }: { className?: string }) {
 
 function BrandPanel() {
   return (
-    <div className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden py-10 px-12" style={{ background: '#0a1628' }}>
-      <AnimatedBackground />
+    <div className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden py-10 px-12" style={{ background: '#0E1B3D' }}>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap');
@@ -405,20 +405,15 @@ function BrandPanel() {
       `}</style>
       
       <div className="flex-1 flex flex-col justify-between z-10">
-        <div className="flex items-center gap-3">
-          <GlobeLogo className="w-12 h-12" />
+        <div className="flex items-center gap-4">
+          <GlobeLogo className="w-12 h-12 shrink-0" />
           <div className="flex flex-col">
-            <span className="font-bold text-[16px] text-white tracking-widest uppercase leading-tight">Global Knowledge Technologies</span>
+            <span className="font-bold text-[16px] text-white tracking-widest leading-tight">Global Knowledge Technologies</span>
             <span className="text-[10px] text-white/40 tracking-[0.08em] uppercase">Education · Innovation · Leadership</span>
           </div>
         </div>
 
-        <div className="mt-16">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-7 h-[1.5px] bg-[#d4a843]" />
-            <span className="text-[#d4a843] text-[11px] font-semibold tracking-[0.22em] uppercase">Viksit Bharat Initiative · 2026</span>
-          </div>
-
+        <div className="mt-16 pl-4 lg:pl-12 xl:pl-20 2xl:pl-24">
           <div className="relative">
             <div className="absolute -top-7 -left-1 text-[clamp(72px,9vw,108px)] font-black leading-[0.88] tracking-tight pointer-events-none select-none z-0 opacity-20" 
                  style={{ WebkitTextStroke: '2px rgba(255,255,255,0.2)', color: 'transparent' }}>
@@ -480,8 +475,7 @@ function BrandPanel() {
           </div>
 
         </div>
-        
-        <div className="flex items-center justify-between mt-12 w-full">
+        <div className="flex items-center justify-between mt-12 mb-6 w-full">
           <span className="text-[12px] text-white/20 tracking-wider">© 2026 Global Knowledge Technologies</span>
           <div className="flex items-center gap-2 px-3 py-1.5 border border-[#d4a843]/20 rounded-full text-[#d4a843]/70 text-[11px] tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-[#d4a843] animate-pulse"></span> Empowering India's Next Generation
@@ -589,33 +583,23 @@ function AuthForms() {
     <>
       {showForgot && <ForgotPasswordModal onClose={() => setShowForgot(false)} />}
 
-      <div className="min-h-screen flex bg-white">
+      <div className="w-full h-full flex bg-[#0E1B3D] z-0 relative">
         <BrandPanel />
 
-        {/* Mobile-visible Back Button */}
-        <div className="absolute top-4 left-4 z-50">
-          <Link href="/" className="flex items-center gap-1.5 text-[#0a1628] hover:text-[#e8631a] transition-colors font-semibold text-sm bg-white/80 backdrop-blur-md px-4 py-2 rounded-full shadow-sm border border-[#E5E7EB]">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Home
-          </Link>
-        </div>
-
         {/* Right: Form panel */}
-        <div className="lg:w-1/2 flex-1 flex items-center justify-center px-4 sm:px-6 py-16 overflow-y-auto relative w-full" style={{ backgroundColor: '#faf7f2' }}>
-          <div className={`w-full bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-[#E5E7EB] p-6 sm:p-10 relative z-10 transition-all duration-300 ${tab === 'signup' ? 'max-w-2xl' : 'max-w-md'}`}>
+        <div className="lg:w-1/2 flex-1 flex items-center justify-center px-4 sm:px-6 pt-28 pb-16 overflow-y-auto relative w-full bg-[#0E1B3D]">
+          <div className={`w-full bg-[#FAF8F4] rounded-2xl shadow-2xl border border-white/10 p-5 sm:p-8 lg:p-12 relative z-10 transition-all duration-300 ${tab === 'signup' ? 'max-w-2xl' : 'max-w-md'}`}>
 
             {/* Tab toggle */}
-            <div className="flex items-center bg-[#f2ede4] border border-[#e8e0d0] rounded-xl p-1 mb-8 shadow-sm">
+            <div className="flex items-center bg-[#EAE4D9] border border-[#DCD6C8] rounded-xl p-1 mb-6 shadow-inner">
               {(['login', 'signup'] as const).map(t => (
                 <button
                   key={t}
                   onClick={() => { setTab(t); setFormError(''); setErrors({}); }}
-                  className={`flex-1 py-2.5 rounded-lg text-[13.5px] font-bold transition-all duration-200 ${
+                  className={`flex-1 py-1.5 sm:py-2 px-1 text-center rounded-lg text-[11px] sm:text-[13px] font-bold leading-tight transition-all duration-200 ${
                     tab === t
-                      ? 'bg-[#0a1628] text-white shadow-md'
-                      : 'text-[#8a7f6e] hover:text-[#0a1628]'
+                      ? 'bg-[#0E1B3D] text-[#FAF8F4] shadow-md'
+                      : 'text-[#8a7f6e] hover:text-[#0E1B3D]'
                   }`}
                 >
                   {t === 'login' ? 'Sign In' : 'Create Account'}
@@ -632,37 +616,37 @@ function AuthForms() {
 
             {/* ── LOGIN FORM ─────────────────────────────── */}
             {tab === 'login' && (
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="mb-2">
-                  <h1 className="font-playfair font-bold text-3xl text-[#0a1628]">Welcome back.</h1>
-                  <p className="text-[14px] text-[#8a7f6e] mt-1 font-medium">Sign in to access your TechTrek dashboard.</p>
+              <form onSubmit={handleLogin} className="space-y-7">
+                <div className="mb-4">
+                  <h1 className="font-playfair font-bold text-4xl text-[#0E1B3D]">Welcome back.</h1>
+                  <p className="text-[15px] text-[#8a7f6e] mt-2 font-medium">Sign in to access your TechTrek dashboard.</p>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/60">College Email</label>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">College Email</label>
                   <input type="email" name="email" value={loginData.email} onChange={onLoginChange}
                     placeholder="student@college.ac.in" required
-                    className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D] font-medium placeholder-[#0E1B3D]/30 outline-none focus:border-[#E8831A] transition-colors text-sm" />
+                    className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D] font-bold placeholder-[#0E1B3D]/30 outline-none focus:border-[#e8631a] transition-colors text-[13px]" />
                   <FieldErr name="email" />
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/60">Password</label>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between ml-1">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70">Password</label>
                     <button type="button" onClick={() => setShowForgot(true)}
-                      className="text-[11px] text-[#E8831A] font-bold hover:underline">
+                      className="text-[11px] text-[#e8631a] font-bold hover:underline">
                       Forgot password?
                     </button>
                   </div>
                   <input type="password" name="password" value={loginData.password} onChange={onLoginChange}
                     placeholder="••••••••" required
-                    className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D] font-medium placeholder-[#0E1B3D]/30 outline-none focus:border-[#E8831A] transition-colors text-sm" />
+                    className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D] font-bold placeholder-[#0E1B3D]/30 outline-none focus:border-[#e8631a] transition-colors text-[13px]" />
                   <FieldErr name="password" />
                 </div>
 
                 <button type="submit" disabled={loading}
-                  className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-br from-[#e8631a] to-[#c8520e] text-white font-extrabold py-3.5 rounded-lg transition-transform hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(232,99,26,0.35)] active:translate-y-0 uppercase tracking-widest text-[14px]">
-                  {loading ? 'Signing in…' : <>Sign In <svg className="w-4 h-4 ml-1" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></>}
+                  className="w-full mt-4 flex items-center justify-center gap-2 bg-[#e8631a] hover:bg-[#c8520e] text-white font-extrabold py-3.5 rounded-xl transition-all shadow-[0_6px_24px_rgba(232,99,26,0.3)] active:translate-y-0 uppercase tracking-widest text-[14px]">
+                  {loading ? 'Signing in…' : <>Sign In <svg className="w-5 h-5 ml-1" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></>}
                 </button>
 
                 <div className="flex items-center gap-3 my-6">
@@ -682,10 +666,10 @@ function AuthForms() {
 
             {/* ── SIGNUP FORM ─────────────────────────────── */}
             {tab === 'signup' && (
-              <form onSubmit={handleSignup} className="space-y-4">
+              <form onSubmit={handleSignup} className="space-y-3">
                 <div className="mb-2">
-                  <h1 className="font-playfair font-bold text-3xl text-[#0a1628]">Create account.</h1>
-                  <p className="text-[14px] text-[#8a7f6e] mt-1 font-medium">Join thousands of students at TechTrek.</p>
+                  <h1 className="font-playfair font-bold text-2xl sm:text-3xl text-[#0E1B3D]">Create account.</h1>
+                  <p className="text-[13px] text-[#8a7f6e] mt-1 font-medium">Join thousands of students at TechTrek.</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -706,8 +690,8 @@ function AuthForms() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Phone */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/60">Phone Number</label>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">Phone Number</label>
                     <input
                       type="tel" name="phone" value={signupData.phone}
                       inputMode="numeric" maxLength={10}
@@ -718,7 +702,7 @@ function AuthForms() {
                         }
                       }}
                       placeholder="9876543210" required
-                      className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D] font-medium placeholder-[#0E1B3D]/30 outline-none focus:border-[#e8631a] transition-colors text-sm"
+                      className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D] font-bold placeholder-[#0E1B3D]/30 outline-none focus:border-[#e8631a] transition-colors text-[13px]"
                     />
                     <FieldErr name="phone" />
                   </div>
@@ -732,10 +716,10 @@ function AuthForms() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Year */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/60">Year</label>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">Year</label>
                     <select name="year" value={signupData.year} onChange={onSignupChange}
-                      className="w-full bg-[#FAF8F4] border-2 border-[#E5E7EB] rounded-xl px-4 py-3 text-[#0E1B3D] font-medium outline-none focus:border-[#e8631a] transition-colors text-sm">
+                      className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D] font-bold outline-none focus:border-[#e8631a] transition-colors text-[13px]">
                       {['1', '2', '3', '4'].map(y => (
                         <option key={y} value={y}>{y === '1' ? '1st' : y === '2' ? '2nd' : y === '3' ? '3rd' : '4th'} Year</option>
                       ))}
@@ -758,8 +742,8 @@ function AuthForms() {
                 </div>
 
                 <button type="submit" disabled={loading}
-                  className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-br from-[#e8631a] to-[#c8520e] text-white font-extrabold py-3.5 rounded-lg transition-transform hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(232,99,26,0.35)] active:translate-y-0 uppercase tracking-widest text-[14px]">
-                  {loading ? 'Creating account…' : <>Complete Registration <svg className="w-4 h-4 ml-1" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></>}
+                  className="w-full mt-4 flex items-center justify-center gap-2 bg-[#e8631a] hover:bg-[#c8520e] text-white font-extrabold py-3.5 rounded-xl transition-all shadow-[0_6px_24px_rgba(232,99,26,0.3)] active:translate-y-0 uppercase tracking-widest text-[14px]">
+                  {loading ? 'Creating account…' : <>Complete Registration <svg className="w-5 h-5 ml-1" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></>}
                 </button>
 
                 <div className="flex items-center gap-3 my-6">

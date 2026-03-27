@@ -238,7 +238,7 @@ export function RegisterCTA({
             {/* Select seat button shown only if registered and hall layout exists */}
             {regStatus === 'REGISTERED' && hallLayout && (
               <button onClick={openSeatModal}
-                className="w-full py-3 rounded-2xl border-2 border-[#E8831A] text-[#E8831A] font-bold text-sm hover:bg-[#E8831A] hover:text-white transition-all flex items-center justify-center gap-2">
+                className="w-full py-3 rounded-2xl border-2 border-[#e8631a] text-[#e8631a] font-bold text-sm hover:bg-[#e8631a] hover:text-white transition-all flex items-center justify-center gap-2">
                 <SeatIcon className="w-4 h-4" /> Select / View Your Seat
               </button>
             )}
@@ -271,7 +271,7 @@ export function RegisterCTA({
             {/* Modal header */}
             <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 sticky top-0 bg-white rounded-t-3xl z-10">
               <div>
-                <h2 className="font-heading font-bold text-xl text-gray-900 flex items-center gap-2"><SeatIcon className="w-5 h-5 text-[#E8831A]" /> Choose Your Seat</h2>
+                <h2 className="font-heading font-bold text-xl text-gray-900 flex items-center gap-2"><SeatIcon className="w-5 h-5 text-[#e8631a]" /> Choose Your Seat</h2>
                 <p className="text-xs text-gray-500 mt-0.5">{hallLayout.hall_name}</p>
               </div>
               <button onClick={() => setShowSeatModal(false)} className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
@@ -285,7 +285,7 @@ export function RegisterCTA({
                 {[
                   { label: 'Total', val: hallLayout.total_rows * hallLayout.seats_per_row, color: 'text-gray-700' },
                   { label: 'Booked', val: seatStatuses.filter(s => s.status === 'confirmed').length, color: 'text-red-500' },
-                  { label: 'On Hold', val: seatStatuses.filter(s => s.status === 'temp_hold').length, color: 'text-orange-500' },
+                  { label: 'On Hold', val: seatStatuses.filter(s => s.status === 'temp_hold').length, color: 'text-[#e8631a]' },
                   { label: 'Free', val: hallLayout.total_rows * hallLayout.seats_per_row - seatStatuses.length, color: 'text-emerald-600' },
                 ].map(s => (
                   <div key={s.label} className="flex-1 min-w-[80px] bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-center">
@@ -320,7 +320,7 @@ export function RegisterCTA({
                     {mySeat.status === 'confirmed'
                       ? <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
                       : <ClockIcon className="w-5 h-5 text-amber-500" />}
-                    Your Seat: <span className="text-[#E8831A]">{mySeat.seatId}</span>
+                    Your Seat: <span className="text-[#e8631a]">{mySeat.seatId}</span>
                   </p>
                   {mySeat.status === 'temp_hold' && mySeat.expiresAt && (
                     <p className="text-sm text-gray-600 mb-4">Expires in: <Countdown expiresAt={mySeat.expiresAt}/></p>

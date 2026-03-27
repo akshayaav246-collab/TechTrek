@@ -26,7 +26,7 @@ export default function Home() {
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 mt-16 md:mt-0">
           <div className="text-white grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left Content */}
-            <div className="flex flex-col items-start gap-4 pt-8 md:pt-0">
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left gap-4 pt-8 md:pt-0">
               <h1 className="font-heading font-extrabold text-5xl md:text-6xl lg:text-7xl xl:text-8xl leading-tight tracking-tight">
                 TechTrek 2026
               </h1>
@@ -36,8 +36,8 @@ export default function Home() {
               <p className="text-lg md:text-xl text-white/95 max-w-2xl font-body leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] font-medium">
                 National AI education platform empowering students across India by bridging the gap between academia and industry through Industry Awareness Summits and aligning with the Viksit Bharat vision.
               </p>
-              <div className="flex flex-wrap gap-4 mt-6">
-                <Link href="/events" className="relative overflow-hidden flex items-center gap-3 rounded-full px-8 py-4 font-bold text-white text-xl bg-gradient-to-r from-[#F97316] to-[#991B1B] shadow-[0_4px_15px_rgba(249,115,22,0.4)] hover:shadow-[0_6px_20px_rgba(249,115,22,0.6)] hover:scale-[1.03] transition-all duration-300 border border-white/10 group">
+              <div className="flex flex-wrap w-full justify-center lg:justify-start gap-4 mt-6">
+                <Link href="/events" className="relative overflow-hidden flex items-center gap-3 rounded-full px-8 py-4 font-bold text-white text-xl bg-gradient-to-r from-[#e8631a] to-[#991B1B] shadow-[0_4px_15px_rgba(232,99,26,0.4)] hover:shadow-[0_6px_20px_rgba(232,99,26,0.6)] hover:scale-[1.03] transition-all duration-300 border border-white/10 group">
                   <span className="absolute top-0 left-0 w-[50%] h-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[150%] skew-x-[-15deg] group-hover:animate-[shimmer_0.75s_linear_infinite] animate-[shimmer_1.5s_linear_infinite]"></span>
                   <span className="relative z-10 flex items-center gap-3">
                     Explore Events

@@ -79,7 +79,7 @@ export default function SuperAdminPage() {
       {/* Header */}
       <div className="bg-[#0E1B3D] px-8 py-5 flex justify-between items-center">
         <div>
-          <p className="text-[#E8831A] text-xs font-bold uppercase tracking-widest">TechTrek</p>
+          <p className="text-[#e8631a] text-xs font-bold uppercase tracking-widest">TechTrek</p>
           <h1 className="text-white font-heading font-extrabold text-2xl">Super Admin Panel</h1>
         </div>
         <div className="flex items-center gap-4">
@@ -100,7 +100,7 @@ export default function SuperAdminPage() {
           <div className="mb-10">
             <h2 className="font-heading font-bold text-xl text-[#0E1B3D] mb-4">Platform Overview</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Total Events" value={analytics.totalEvents} color="border-[#E8831A]" />
+              <StatCard label="Total Events" value={analytics.totalEvents} color="border-[#e8631a]" />
               <StatCard label="Students" value={analytics.totalStudents} color="border-emerald-500" />
               <StatCard label="Registrations" value={analytics.registrations.registered} sub={`+${analytics.registrations.waitlisted} waitlisted`} color="border-blue-500" />
               <StatCard label="Checked In" value={analytics.checkedInCount} sub={`${analytics.noShowRate}% no-show rate`} color="border-purple-500" />
@@ -116,7 +116,7 @@ export default function SuperAdminPage() {
             </h2>
             <button
               onClick={() => setShowCreate(!showCreate)}
-              className="bg-[#E8831A] text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-[#d4741a] transition-colors"
+              className="bg-[#e8631a] text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-[#d4741a] transition-colors"
             >
               + Create Admin
             </button>
@@ -145,7 +145,7 @@ export default function SuperAdminPage() {
                       type={f.type} placeholder={f.ph} required
                       value={form[f.key as keyof typeof form]}
                       onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#E8831A] transition-colors"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#e8631a] transition-colors"
                     />
                   </div>
                 ))}

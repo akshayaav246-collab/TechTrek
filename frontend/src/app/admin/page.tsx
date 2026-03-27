@@ -88,7 +88,7 @@ export default function AdminPage() {
       title="Dashboard"
       headerActions={
         <Link href="/admin/create-event"
-          className="bg-[#E8831A] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#d4741a] transition-colors shadow-sm w-full sm:w-auto text-center">
+          className="bg-[#e8631a] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#d4741a] transition-colors shadow-sm w-full sm:w-auto text-center">
           + Create Event
         </Link>
       }
@@ -103,7 +103,7 @@ export default function AdminPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <Metric label="Total Events"    value={summary?.totalEvents || events.length} accent="border-[#0E1B3D]" />
-              <Metric label="Registrations"   value={summary?.totalRegistrations || 0} sub={`+${summary?.totalWaitlist || 0} on waitlist`} accent="border-[#E8831A]" />
+              <Metric label="Registrations"   value={summary?.totalRegistrations || 0} sub={`+${summary?.totalWaitlist || 0} on waitlist`} accent="border-[#e8631a]" />
               <Metric label="Checked In"      value={summary?.totalCheckins || 0}      sub={`${summary?.checkInRate || 0}% check-in rate`} accent="border-emerald-500" />
               <Metric label="Sold Out Events" value={summary?.soldOut || 0}             accent="border-red-500" />
               <Metric label="Total Revenue"   value={`₹${(summary?.totalRevenue || 0).toLocaleString('en-IN')}`} accent="border-blue-500" onClick={() => setShowRevenueModal(true)} />
@@ -150,12 +150,12 @@ export default function AdminPage() {
                     <div key={c.city}>
                       <div className="flex justify-between text-sm mb-1.5">
                         <span className="font-bold text-[#0E1B3D] flex items-center gap-2">
-                          <span className="text-[#E8831A] font-extrabold text-xs">#{i + 1}</span> {c.city}
+                          <span className="text-[#e8631a] font-extrabold text-xs">#{i + 1}</span> {c.city}
                         </span>
                         <span className="text-gray-500 font-bold">{c.count} regs</span>
                       </div>
                       <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-[#E8831A] to-[#0E1B3D] rounded-full transition-all duration-700"
+                        <div className="h-full bg-gradient-to-r from-[#e8631a] to-[#0E1B3D] rounded-full transition-all duration-700"
                           style={{ width: `${Math.round((c.count / maxCity) * 100)}%` }} />
                       </div>
                     </div>
@@ -171,14 +171,14 @@ export default function AdminPage() {
             <div className="lg:col-span-3 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-50 flex justify-between items-center">
                 <h2 className="font-heading font-bold text-lg text-[#0E1B3D]">My Events</h2>
-                <Link href="/admin/events" className="text-[#E8831A] text-xs font-bold hover:underline">View All →</Link>
+                <Link href="/admin/events" className="text-[#e8631a] text-xs font-bold hover:underline">View All →</Link>
               </div>
               {loading ? (
                 <div className="px-6 py-8 space-y-3">{Array.from({length:3}).map((_,i) => <div key={i} className="h-14 bg-gray-50 rounded-xl animate-pulse"/>)}</div>
               ) : events.length === 0 ? (
                 <div className="text-center py-16 text-gray-400">
                   <p className="font-medium mb-3">No events yet.</p>
-                  <Link href="/admin/create-event" className="text-[#E8831A] font-bold text-sm hover:underline">Create your first event →</Link>
+                  <Link href="/admin/create-event" className="text-[#e8631a] font-bold text-sm hover:underline">Create your first event →</Link>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-50">
@@ -197,13 +197,13 @@ export default function AdminPage() {
                               {isSoldOut ? 'Sold Out' : evt.status}
                             </span>
                             <div className="text-right">
-                              <p className="font-extrabold text-[#E8831A] text-base leading-none">{evt.registeredCount}</p>
+                              <p className="font-extrabold text-[#e8631a] text-base leading-none">{evt.registeredCount}</p>
                               <p className="text-[10px] text-gray-400">/ {evt.capacity}</p>
                             </div>
                           </div>
                         </div>
                         <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${isSoldOut ? 'bg-red-500' : 'bg-[#E8831A]'}`} style={{ width: `${pct}%` }} />
+                          <div className={`h-full rounded-full ${isSoldOut ? 'bg-red-500' : 'bg-[#e8631a]'}`} style={{ width: `${pct}%` }} />
                         </div>
                       </div>
                     );
@@ -272,7 +272,7 @@ export default function AdminPage() {
             <div className="p-6 overflow-y-auto flex-1">
               {events.filter(e => e.revenue > 0).length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
-                  <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-[#E8831A]">
+                  <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-[#e8631a]">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>

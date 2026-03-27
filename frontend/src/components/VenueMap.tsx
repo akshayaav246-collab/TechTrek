@@ -65,7 +65,7 @@ export default function VenueMap({
       bg: '#FED7AA', border: '#F97316', color: '#9A3412', cursor: 'not-allowed', pulse: false,
     };
     if (isVip) return {
-      bg: 'rgba(232,131,26,0.15)', border: '#E8831A', color: '#E8831A', cursor: interactive ? 'pointer' : 'default', pulse: false,
+      bg: 'rgba(232,131,26,0.15)', border: '#e8631a', color: '#e8631a', cursor: interactive ? 'pointer' : 'default', pulse: false,
     };
     return {
       bg: '#F5F5F0', border: '#D1D5DB', color: '#9CA3AF', cursor: interactive ? 'pointer' : 'default', pulse: false,
@@ -89,7 +89,7 @@ export default function VenueMap({
     <div className="flex items-center justify-center w-full my-3">
       <div className="flex-1 h-px bg-gray-200"/>
       <div className="px-6 py-2 rounded-lg mx-3 text-xs font-extrabold tracking-widest uppercase"
-        style={{ background: '#E8831A', color: '#fff' }}>⬛ STAGE</div>
+        style={{ background: '#e8631a', color: '#fff' }}>⬛ STAGE</div>
       <div className="flex-1 h-px bg-gray-200"/>
     </div>
   );
@@ -124,7 +124,7 @@ export default function VenueMap({
               {/* Row label left */}
               <div className="w-8 shrink-0 flex items-center justify-end gap-1 pr-1">
                 <span className="text-[10px] font-bold text-gray-400">{rowLabel}</span>
-                {isVip && <span className="text-[7px] font-extrabold px-1 rounded" style={{ background: '#E8831A', color: '#fff' }}>VIP</span>}
+                {isVip && <span className="text-[7px] font-extrabold px-1 rounded" style={{ background: '#e8631a', color: '#fff' }}>VIP</span>}
               </div>
               {/* Seats */}
               {Array.from({ length: seats_per_row }, (_, si) => {
@@ -168,10 +168,10 @@ export default function VenueMap({
         <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-sm bg-[#F5F5F0] border border-gray-200"/> Available</div>
         {interactive && <>
           <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-sm border-2 border-amber-400 bg-amber-50"/> My Hold</div>
-          <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-sm border border-orange-400 bg-orange-100"/> Held</div>
+          <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-sm border border-[#e8631a] bg-[#e8631a]/20"/> Held</div>
           <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-sm border border-red-400 bg-red-100"/> Booked</div>
         </>}
-        <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-sm border border-[#E8831A]" style={{background:'rgba(232,131,26,0.15)'}}/> VIP</div>
+        <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-sm border border-[#e8631a]" style={{background:'rgba(232,131,26,0.15)'}}/> VIP</div>
       </div>
 
       {stage_position === 'front' && <StageBar/>}
