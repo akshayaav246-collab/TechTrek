@@ -19,7 +19,7 @@ const registerForEvent = async (req, res) => {
     const userDomain = user.email.split('@')[1];
     if (userDomain !== event.collegeDomain && event.collegeDomain !== 'ALL') {
       return res.status(403).json({
-        message: `This event is strictly for students from ${event.collegeName}. Your email domain (${userDomain}) is not authorized.`
+        message: `The event is for ${event.collegeName} students`
       });
     }
 

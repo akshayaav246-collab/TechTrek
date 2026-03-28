@@ -37,9 +37,13 @@ const signup = async (req, res) => {
       }
     }
 
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ $or: [{ email }, { phone }] });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      if (userExists.email === email) {
+        return res.status(400).json({ message: 'An account with this email already exists' });
+      } else {
+        return res.status(400).json({ message: 'An account with this phone number already exists' });
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -205,6 +209,36 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, getMe, forgotPassword, verifyOtp, resetPassword };
+// @desc    Change password from profile
+// @route   POST /api/auth/change-password
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Both current and new passwords are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Incorrect current password' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { signup, login, getMe, forgotPassword, verifyOtp, resetPassword, changePassword };
 
 

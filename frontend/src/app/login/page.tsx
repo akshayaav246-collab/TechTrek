@@ -115,7 +115,7 @@ function CollegeInput({ value, onChange }: {
       const r = inputRef.current.getBoundingClientRect();
       setDropPos({ top: r.bottom + 6, left: r.left, width: r.width });
     }
-    setOpen(q.trim().length > 0 && matches.length > 0);
+    setOpen(matches.length > 0);
   };
 
   const openAll = () => {
@@ -144,6 +144,7 @@ function CollegeInput({ value, onChange }: {
             <button
               key={i}
               type="button"
+              onMouseDown={(e) => { e.preventDefault(); select(c); }}
               onClick={() => select(c)}
               className="w-full text-left px-4 py-3 hover:bg-[#FFF5E6] transition-colors border-b border-[#F3F4F6] last:border-0"
             >
@@ -181,6 +182,7 @@ function CollegeInput({ value, onChange }: {
             value={query}
             onChange={handleInput}
             onFocus={openAll}
+            onClick={openAll}
             placeholder="Click or type to select your college…"
             required
             autoComplete="off"
@@ -512,7 +514,13 @@ function AuthForms() {
     if (phoneErr) e.phone = phoneErr;
     if (!signupData.college.trim()) e.college = 'College name is required.';
     if (!signupData.discipline.trim()) e.discipline = 'Discipline is required.';
-    if (signupData.password.length < 6) e.password = 'Password must be at least 6 characters.';
+    
+    const pw = signupData.password;
+    if (pw.length < 8) e.password = 'Password must be at least 8 characters.';
+    else if (!/(?=.*[A-Z])/.test(pw)) e.password = 'Password must contain at least one capital letter.';
+    else if (!/(?=.*\d)/.test(pw)) e.password = 'Password must contain at least one number.';
+    else if (!/(?=.*[!@#$%^&*])/.test(pw)) e.password = 'Password must contain at least one special character.';
+    
     return e;
   };
 
@@ -559,8 +567,12 @@ function AuthForms() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Signup failed');
-      login(data, data.token);
-      router.push(redirect);
+      
+      alert('Account created successfully! Please sign in to continue.');
+      setLoginData({ email: signupData.email, password: '' });
+      setTab('login');
+      setSignupData({ name: '', email: '', phone: '', college: '', year: '1', discipline: '', password: '' });
+      
     } catch (err: any) { setFormError(err.message); }
     finally { setLoading(false); }
   };
@@ -737,7 +749,15 @@ function AuthForms() {
                 {/* Password */}
                 <div className="flex flex-col gap-1.5">
                   <Field label="Password" type="password" name="password" value={signupData.password}
-                    onChange={onSignupChange} placeholder="Min 6 characters" />
+                    onChange={onSignupChange} placeholder="Min 8 chars, 1 capital, 1 number, 1 special" />
+                  {signupData.password && (
+                    <div className="flex flex-col gap-1 mt-1 text-[10px] sm:text-[11px] bg-[#0E1B3D]/5 p-2.5 rounded-xl border border-[#0E1B3D]/10">
+                      <span className={signupData.password.length >= 8 ? "text-emerald-600 font-bold" : "text-[#0E1B3D]/60 font-medium"}>{signupData.password.length >= 8 ? "✓" : "○"} At least 8 characters</span>
+                      <span className={/(?=.*[A-Z])/.test(signupData.password) ? "text-emerald-600 font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*[A-Z])/.test(signupData.password) ? "✓" : "○"} One uppercase letter</span>
+                      <span className={/(?=.*\d)/.test(signupData.password) ? "text-emerald-600 font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*\d)/.test(signupData.password) ? "✓" : "○"} One number</span>
+                      <span className={/(?=.*[!@#$%^&*])/.test(signupData.password) ? "text-emerald-600 font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*[!@#$%^&*])/.test(signupData.password) ? "✓" : "○"} One special character (!@#$%^&*)</span>
+                    </div>
+                  )}
                   <FieldErr name="password" />
                 </div>
 

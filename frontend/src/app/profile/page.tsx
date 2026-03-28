@@ -63,6 +63,35 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [expandedQR, setExpandedQR] = useState<string | null>(null);
 
+  const [pwData, setPwData] = useState({ currentPassword: '', newPassword: '' });
+  const [pwMsg, setPwMsg] = useState({ type: '', text: '' });
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwData.newPassword.length < 6) {
+      setPwMsg({ type: 'error', text: 'New password must be at least 6 characters.' });
+      return;
+    }
+    setPwLoading(true);
+    setPwMsg({ type: '', text: '' });
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(pwData),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setPwMsg({ type: 'success', text: 'Password updated successfully!' });
+      setPwData({ currentPassword: '', newPassword: '' });
+    } catch (err: any) {
+      setPwMsg({ type: 'error', text: err.message });
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!ctxUser || !token) { router.push('/login?redirect=/profile'); return; }
 
@@ -102,7 +131,6 @@ export default function ProfilePage() {
     { label: 'Discipline', value: displayUser.discipline, Icon: IconDiscipline },
     { label: 'Year', value: yearNum ? `${yearNum}${yearSuffix(yearNum)} Year` : undefined, Icon: IconYear },
     { label: 'Phone', value: displayUser.phone, Icon: IconPhone },
-    { label: 'Email Domain', value: displayUser.domain ? `@${displayUser.domain}` : undefined, Icon: IconDomain },
   ];
 
   return (
@@ -150,6 +178,40 @@ export default function ProfilePage() {
                   ))}
                 </div>
 
+                <div className="mt-8 mb-6 pt-6 border-t border-border">
+                  <h3 className="text-[11px] font-bold text-[#e8631a] uppercase tracking-widest mb-4">Change Password</h3>
+                  <form onSubmit={handlePasswordChange} className="space-y-3">
+                    <input 
+                      type="password" 
+                      placeholder="Current Password" 
+                      value={pwData.currentPassword}
+                      onChange={e => setPwData({...pwData, currentPassword: e.target.value})}
+                      required
+                      className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors"
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="New Password" 
+                      value={pwData.newPassword}
+                      onChange={e => setPwData({...pwData, newPassword: e.target.value})}
+                      required
+                      className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors"
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={pwLoading}
+                      className="w-full bg-[#0E1B3D] hover:bg-[#1a2d5c] text-white transition-colors py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider disabled:opacity-50"
+                    >
+                      {pwLoading ? 'Updating…' : 'Update Password'}
+                    </button>
+                    {pwMsg.text && (
+                      <p className={`text-xs font-medium text-center ${pwMsg.type === 'error' ? 'text-[#b91d1d]' : 'text-emerald-600'}`}>
+                        {pwMsg.text}
+                      </p>
+                    )}
+                  </form>
+                </div>
+
                 <button
                   onClick={() => { logout(); router.push('/'); }}
                   className="mt-5 w-full border-2 border-[#b91d1d]/25 text-[#b91d1d] hover:bg-[#b91d1d] hover:text-white transition-all py-2.5 rounded-xl font-bold text-sm"
@@ -169,7 +231,7 @@ export default function ProfilePage() {
 
             {registrations.length === 0 ? (
               <div className="text-center py-20 bg-card border border-dashed border-border rounded-3xl">
-                <span className="text-5xl block mb-4">🎫</span>
+                <svg className="w-16 h-16 mx-auto mb-4 text-[#e8631a]/80" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" /></svg>
                 <h3 className="font-bold text-xl text-secondary mb-2">No tickets yet</h3>
                 <p className="text-foreground/60 mb-6 text-sm">Register for a TechTrek summit to see your tickets here.</p>
                 <Link href="/events" className="bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#d4741a] transition-colors">

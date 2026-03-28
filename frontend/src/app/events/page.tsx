@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import { Section } from '@/components/ui/Section';
-import { Input } from '@/components/ui/Input';
+import { useState, useMemo, useEffect } from 'react';
 import { EventCard } from '@/components/events/EventCard';
 import type { TechEvent } from '@/data/mockEvents';
-import { useEffect } from 'react';
 
 export default function EventsPage() {
   const [events, setEvents] = useState<TechEvent[]>([]);
@@ -24,13 +21,15 @@ export default function EventsPage() {
       .catch(console.error);
   }, []);
 
-  // Extract unique cities from mock data
   const cities = useMemo(() => {
     const uniqueCities = new Set(events.map(e => e.city));
     return ['ALL', ...Array.from(uniqueCities)];
   }, [events]);
 
-  // Filter logic
+  const upcomingCount = events.filter(e => e.status === 'UPCOMING').length;
+  const completedCount = events.filter(e => e.status === 'COMPLETED').length;
+  const totalCount = events.length;
+
   const filteredEvents = useMemo(() => {
     const filtered = events.filter((event) => {
       const searchLower = searchTerm.toLowerCase();
@@ -38,7 +37,6 @@ export default function EventsPage() {
                             event.collegeName.toLowerCase().includes(searchLower);
       const matchesStatus = statusFilter === 'ALL' || event.status === statusFilter;
       const matchesCity = cityFilter === 'ALL' || event.city === cityFilter;
-      
       return matchesSearch && matchesStatus && matchesCity;
     });
 
@@ -52,103 +50,156 @@ export default function EventsPage() {
   }, [events, searchTerm, statusFilter, cityFilter]);
 
   return (
-    <div className="pt-20 bg-background min-h-screen font-body">
-      {/* Header */}
-      <Section className="bg-secondary text-white py-16 md:py-24 relative overflow-hidden">
-        {/* Decorative blur */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-        
-        <div className="max-w-7xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative z-10">
-          <h1 className="font-heading font-extrabold text-5xl md:text-6xl mb-6 text-[#FF8C00] drop-shadow-md tracking-tight">Explore TechTrek Events</h1>
-          <p className="text-white/90 font-medium max-w-2xl mx-auto text-lg md:text-xl leading-relaxed">
-            Discover upcoming summits, hands-on workshops, and exclusive networking sessions at top engineering colleges across India.
-          </p>
-        </div>
-      </Section>
+    <div className="flex flex-col md:flex-row min-h-screen bg-background font-body items-start">
       
-      {/* Filters and Grid */}
-      <Section className="py-12 md:py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          {/* Filters Bar */}
-          <div className="bg-card border border-border p-4 md:p-6 rounded-2xl shadow-sm mb-12 flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Search Input */}
-            <div className="w-full md:w-1/3 relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/50">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-              </span>
-              <Input 
-                placeholder="Search college or event name..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 bg-background border-2 border-border focus:border-primary"
-              />
+      {/* ─── LEFT SIDEBAR ────────────────────────────────────────────── */}
+      <aside className="w-full md:w-64 lg:w-72 shrink-0 border-r border-[#0E1B3D]/50 bg-transparent flex-col py-8 px-5 lg:px-7 md:sticky md:top-[80px] md:h-[calc(100vh-80px)] overflow-y-auto hidden md:flex">
+        
+        {/* Search */}
+        <div className="mb-8">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#0E1B3D]/40 mb-3 ml-1">Search</h3>
+          <div className="relative">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#0E1B3D]/40">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </span>
+            <input 
+              placeholder="College or event name..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-background border border-[#E5E7EB] rounded-xl text-[13px] font-bold outline-none focus:border-[#e8631a] transition-colors text-[#0E1B3D] placeholder-[#0E1B3D]/30"
+            />
+          </div>
+        </div>
+
+        {/* Status */}
+        <div className="mb-8">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#0E1B3D]/40 mb-3 ml-1">Status</h3>
+          <div className="flex flex-col gap-1.5">
+            <button onClick={() => setStatusFilter('ALL')} className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === 'ALL' ? 'bg-[#e8631a]/10 text-[#e8631a] font-bold' : 'text-[#0E1B3D]/70 hover:bg-[#0E1B3D]/5 font-medium'}`}>
+              <span>All Events</span>
+              {statusFilter === 'ALL' && <span className="bg-[#e8631a] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{totalCount}</span>}
+            </button>
+            <button onClick={() => setStatusFilter('UPCOMING')} className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === 'UPCOMING' ? 'bg-[#e8631a]/10 text-[#e8631a] font-bold' : 'text-[#0E1B3D]/70 hover:bg-[#0E1B3D]/5 font-medium'}`}>
+              <span>Upcoming</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${statusFilter === 'UPCOMING' ? 'bg-[#e8631a] text-white' : 'bg-[#0E1B3D]/10 text-[#0E1B3D]/50'}`}>{upcomingCount}</span>
+            </button>
+            <button onClick={() => setStatusFilter('COMPLETED')} className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === 'COMPLETED' ? 'bg-[#e8631a]/10 text-[#e8631a] font-bold' : 'text-[#0E1B3D]/70 hover:bg-[#0E1B3D]/5 font-medium'}`}>
+              <span>Completed</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${statusFilter === 'COMPLETED' ? 'bg-[#e8631a] text-white' : 'bg-[#0E1B3D]/10 text-[#0E1B3D]/50'}`}>{completedCount}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* City */}
+        <div className="mb-8">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#0E1B3D]/40 mb-3 ml-1">City</h3>
+          <div className="flex flex-col gap-2">
+            {cities.map(city => (
+              <label key={city} onClick={() => setCityFilter(city)} className="flex items-center gap-3 cursor-pointer group px-2 py-1">
+                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${cityFilter === city ? 'bg-[#e8631a] border-[#e8631a]' : 'border-[#E5E7EB] bg-background group-hover:border-[#e8631a]/50'}`}>
+                  {cityFilter === city && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>}
+                </div>
+                <span className={`text-[13px] transition-colors ${cityFilter === city ? 'font-bold text-[#0E1B3D]' : 'font-medium text-[#0E1B3D]/70 group-hover:text-[#0E1B3D]'}`}>
+                  {city === 'ALL' ? 'All Cities' : city}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+      </aside>
+
+      {/* ─── RIGHT MAIN CONTENT ────────────────────────────────────────── */}
+      <main className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
+        
+        {/* Banner */}
+        <div className="bg-[#0E1B3D] p-6 sm:p-8 lg:p-10 xl:p-12 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-8 shadow-xl border-b-[4px] border-[#e8631a]">
+          {/* Decorative Grid SVG */}
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E\")" }}></div>
+          <div className="absolute -right-32 -top-32 w-96 h-96 bg-[#e8631a]/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-px bg-[#e8631a]"></div>
+              <span className="text-[10px] sm:text-xs font-bold tracking-[0.2em] text-[#e8631a] uppercase">Viksit Bharat Initiative</span>
             </div>
             
-            {/* Dropdowns & Toggles */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-              <select 
-                className="bg-background border-2 border-border rounded-xl px-4 py-3 outline-none focus:border-primary transition-colors text-foreground font-medium appearance-none cursor-pointer"
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-              >
-                {cities.map(city => (
-                  <option key={city} value={city}>{city === 'ALL' ? 'All Cities' : city}</option>
-                ))}
-              </select>
-              
-              <div className="flex bg-background border border-border rounded-xl p-1 shrink-0 shadow-inner">
-                <button 
-                  onClick={() => setStatusFilter('ALL')}
-                  className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${statusFilter === 'ALL' ? 'bg-secondary text-white shadow-md' : 'text-foreground/70 hover:bg-black/5 hover:text-foreground'}`}
-                >
-                  All
-                </button>
-                <button 
-                  onClick={() => setStatusFilter('UPCOMING')}
-                  className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${statusFilter === 'UPCOMING' ? 'bg-primary text-white shadow-md' : 'text-foreground/70 hover:bg-black/5 hover:text-foreground'}`}
-                >
-                  Upcoming
-                </button>
-                <button 
-                  onClick={() => setStatusFilter('COMPLETED')}
-                  className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${statusFilter === 'COMPLETED' ? 'bg-secondary text-white shadow-md' : 'text-foreground/70 hover:bg-black/5 hover:text-foreground'}`}
-                >
-                  Completed
-                </button>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold text-white mb-4 tracking-tight leading-[1.1]">
+              Explore <span className="text-[#e8631a]">TechTrek</span> Events
+            </h1>
+            
+            <p className="text-white/60 text-sm sm:text-base mb-8 max-w-lg font-medium leading-relaxed">
+              Summits, hands-on workshops, and exclusive networking sessions at top engineering colleges across India.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 shadow-inner">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                <span className="text-[11px] sm:text-xs font-bold text-white/90">{upcomingCount} Upcoming</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 shadow-inner">
+                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                <span className="text-[11px] sm:text-xs font-bold text-white/90">{completedCount} Completed</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 shadow-inner">
+                <div className="w-2 h-2 rounded-full bg-white/30"></div>
+                <span className="text-[11px] sm:text-xs font-bold text-white/90">{totalCount} Total</span>
               </div>
             </div>
           </div>
-
-          {/* Events Grid */}
-          {initialLoading ? (
-            <div className="text-center py-20"><p className="text-secondary font-bold text-xl animate-pulse">Loading Events...</p></div>
-          ) : filteredEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {filteredEvents.map(event => (
-                <div key={event.eventId || event._id} className="h-full">
-                  <EventCard event={event} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20 bg-black/5 rounded-3xl border border-dashed border-border max-w-3xl mx-auto">
-              <div className="flex justify-center mb-4 opacity-50">
-                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-              </div>
-              <h3 className="text-2xl font-bold text-secondary mb-2">No events found</h3>
-              <p className="text-foreground/70 text-lg">Try adjusting your search terms or filters to find what you're looking for.</p>
-              <button 
-                onClick={() => { setSearchTerm(''); setCityFilter('ALL'); setStatusFilter('ALL'); }}
-                className="mt-6 text-primary font-bold hover:underline"
-              >
-                Clear all filters
-              </button>
-            </div>
-          )}
-
         </div>
-      </Section>
+
+        <div className="p-4 sm:p-6 lg:p-10 flex-1 flex flex-col">
+          {/* Action Bar / Sort */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 px-1">
+            <h2 className="text-[13px] font-bold text-[#0E1B3D]/60 tracking-wider">
+              Showing <span className="text-[#0E1B3D] text-sm tabular-nums">{filteredEvents.length}</span> events
+            </h2>
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            <span className="text-[10px] font-bold text-[#0E1B3D]/40 uppercase tracking-widest">Sort by</span>
+            <div className="relative bg-card border border-[#E5E7EB] rounded-lg">
+              <select className="bg-transparent text-[12px] font-bold text-[#0E1B3D] py-2 pl-3 pr-8 outline-none cursor-pointer appearance-none rounded-lg focus:border-[#e8631a] transition-colors relative z-10">
+                <option value="upcoming">Date (Upcoming)</option>
+                <option value="name">College Name</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0E1B3D]/40 pointer-events-none z-0">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Grid Output */}
+        {initialLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-[#e8631a]/20 border-t-[#e8631a] rounded-full animate-spin mb-4"></div>
+            <p className="text-[#0E1B3D]/50 font-bold text-sm uppercase tracking-widest animate-pulse">Loading Grid...</p>
+          </div>
+        ) : filteredEvents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+            {filteredEvents.map(event => (
+              <div key={event.eventId || event._id} className="h-full transform hover:-translate-y-1 transition-transform duration-300">
+                <EventCard event={event} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-24 bg-[#0E1B3D]/5 rounded-3xl border border-dashed border-[#0E1B3D]/10 max-w-2xl mx-auto w-full mt-4">
+            <div className="flex justify-center mb-5 opacity-30 text-[#0E1B3D]">
+              <svg className="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <h3 className="text-xl font-extrabold text-[#0E1B3D] mb-2 font-heading">No events found</h3>
+            <p className="text-[#0E1B3D]/60 text-sm font-medium max-w-sm mx-auto">Try adjusting your search terms or filters to find what you're looking for.</p>
+            <button 
+              onClick={() => { setSearchTerm(''); setCityFilter('ALL'); setStatusFilter('ALL'); }}
+              className="mt-6 text-[#e8631a] font-bold text-sm hover:underline"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
+        </div>
+      </main>
     </div>
   );
 }

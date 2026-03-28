@@ -13,7 +13,7 @@ export function Footer() {
         <div>
           <h4 className="font-bold mb-4 font-heading">Quick Links</h4>
           <ul className="space-y-2 text-sm text-white/80">
-            <li><Link href="/" className="hover:text-primary transition-colors">Home</Link></li>
+            <li><Link href="/" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-primary transition-colors">Home</Link></li>
             <li><Link href="/events" className="hover:text-primary transition-colors">Events</Link></li>
           </ul>
         </div>
