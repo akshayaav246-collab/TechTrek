@@ -145,7 +145,7 @@ export default function SuperAdminPage() {
                       type={f.type} placeholder={f.ph} required
                       value={form[f.key as keyof typeof form]}
                       onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#e8631a] transition-colors"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-[#1C1A17] placeholder-gray-400 outline-none focus:border-[#e8631a] transition-colors bg-white"
                     />
                   </div>
                 ))}

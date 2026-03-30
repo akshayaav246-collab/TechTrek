@@ -43,10 +43,10 @@ function FormInput({ label, type = 'text', placeholder = '', value, onChange, re
 }) {
   return (
     <div>
-      <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">{label}</label>
+      <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">{label}</label>
       <input type={type} placeholder={placeholder} value={value} required={required}
         onChange={e => onChange(e.target.value)}
-        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors bg-white" />
+        className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm" />
     </div>
   );
 }
@@ -162,12 +162,7 @@ export default function EditEventPage() {
 
   const layoutPreviewReady = layout.hall_name && layout.total_rows > 0 && layout.seats_per_row > 0;
 
-  const titleNode = (
-    <div>
-      <Link href={`/admin/events/${eventId}`} className="text-gray-400 text-xs hover:text-gray-600 transition-colors mb-1 inline-block">← Back to Dashboard</Link>
-      <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#0E1B3D]">Edit Event</h1>
-    </div>
-  );
+  const titleNode = "Edit Event";
 
   return (
     <AdminLayout title={titleNode}>
@@ -208,9 +203,9 @@ export default function EditEventPage() {
                       <FormInput label="Venue *" value={form.venue} onChange={v => set('venue', v)} placeholder="Main Auditorium" required />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Description</label>
+                      <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Description</label>
                       <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={4} placeholder="Describe the event…"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] resize-none transition-colors"/>
+                        className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] resize-none transition-colors shadow-sm"/>
                     </div>
                     <FormInput label="Topics (comma separated)" value={form.topics} onChange={v => set('topics', v)} placeholder="AI, ML, IoT, Robotics" />
                   </div>
@@ -224,17 +219,17 @@ export default function EditEventPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <FormInput label="Total Capacity *" type="number" value={form.capacity} onChange={v => set('capacity', v)} placeholder="500" required />
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Registration Fee (₹)</label>
+                        <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Registration Fee (₹)</label>
                         <div className="relative">
                           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</span>
                           <input type="number" min={0} value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0 = Free"
-                            className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors" />
+                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm" />
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Status</label>
-                      <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors" value={form.status} onChange={e => set('status', e.target.value)}>
+                      <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Status</label>
+                      <select className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm" value={form.status} onChange={e => set('status', e.target.value)}>
                         <option value="UPCOMING">Upcoming</option>
                         <option value="COMPLETED">Completed</option>
                       </select>
@@ -246,7 +241,7 @@ export default function EditEventPage() {
                           {['time', 'title', 'duration', 'speaker'].map(k => (
                             <input key={k} value={item[k as keyof AgendaItem]} onChange={e => setAgenda(i, k, e.target.value)}
                               placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
-                              className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#e8631a] transition-colors"/>
+                              className="bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
                           ))}
                           {form.agenda.length > 1 && (
                             <button type="button" onClick={() => removeAgenda(i)} className="text-red-400 text-xs col-start-4 text-right">Remove</button>
@@ -279,57 +274,57 @@ export default function EditEventPage() {
                     )}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Hall Name *</label>
+                        <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Hall Name *</label>
                         <input value={layout.hall_name} onChange={e => setL('hall_name', e.target.value)} placeholder="Main Auditorium"
-                          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Total Rows</label>
+                          <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Total Rows</label>
                           <input type="number" min={1} max={52} value={layout.total_rows}
                             onChange={e => setL('total_rows', Math.max(1, Math.min(52, Number(e.target.value))))}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
                         </div>
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Seats / Row</label>
+                          <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Seats / Row</label>
                           <input type="number" min={1} value={layout.seats_per_row}
                             onChange={e => setL('seats_per_row', Math.max(1, Number(e.target.value)))}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
                         </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Aisle After Seat # (comma separated)</label>
+                        <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Aisle After Seat (comma separated)</label>
                         <input value={aisleInput} onChange={e => applyAisles(e.target.value)} placeholder="e.g. 10, 20"
-                          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
                         <p className="text-[10px] text-gray-400 mt-1">Inserts an aisle gap after these seat positions</p>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">VIP / Reserved Rows (comma separated)</label>
+                        <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">VIP / Reserved Rows (comma separated)</label>
                         <input value={reservedInput} onChange={e => applyReserved(e.target.value)} placeholder="e.g. A, B"
-                          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
                         <p className="text-[10px] text-gray-400 mt-1">These rows will be highlighted as VIP</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Stage Position</label>
+                        <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Stage Position</label>
                         <div className="flex gap-3">
                           {(['front', 'back'] as const).map(pos => (
                             <button key={pos} type="button" onClick={() => setL('stage_position', pos)}
-                              className={`flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all ${layout.stage_position === pos ? 'bg-[#e8631a] text-white border-[#e8631a]' : 'border-gray-200 text-gray-500 hover:border-[#e8631a]'}`}>
+                              className={`flex-1 bg-white shadow-sm py-2.5 rounded-xl border text-sm font-bold transition-all ${layout.stage_position === pos ? 'bg-[#e8631a] text-white border-[#e8631a]' : 'border-gray-200 text-gray-500 hover:border-[#e8631a]'}`}>
                               {pos === 'front' ? '⬛ Front' : 'Back ⬛'}
                             </button>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Entry / Exit Points</label>
+                        <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Entry / Exit Points</label>
                         <div className="flex gap-3">
                           {(['left', 'right', 'both'] as const).map(ep => (
                             <button key={ep} type="button" onClick={() => setL('entry_points', ep)}
-                              className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all capitalize ${layout.entry_points === ep ? 'bg-[#0E1B3D] text-white border-[#0E1B3D]' : 'border-gray-200 text-gray-500 hover:border-[#0E1B3D]'}`}>
+                              className={`flex-1 bg-white shadow-sm py-2.5 rounded-xl border text-xs font-bold transition-all capitalize ${layout.entry_points === ep ? 'bg-[#0E1B3D] text-white border-[#0E1B3D]' : 'border-gray-200 text-gray-500 hover:border-[#0E1B3D]'}`}>
                               {ep}
                             </button>
                           ))}
@@ -360,9 +355,9 @@ export default function EditEventPage() {
                         <div className="grid grid-cols-2 gap-3">
                           {([['name', 'Full Name'], ['role', 'Title/Role'], ['company', 'Company'], ['bio', 'Short Bio']] as [keyof Speaker, string][]).map(([k, lbl]) => (
                             <div key={k} className={k === 'bio' ? 'col-span-2' : ''}>
-                              <label className="block text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1">{lbl}</label>
+                              <label className="block text-xs font-bold tracking-wide text-gray-500 mb-1">{lbl}</label>
                               <input value={sp[k]} onChange={e => setSpeaker(i, k, e.target.value)} placeholder={lbl}
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                                className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
                             </div>
                           ))}
                         </div>

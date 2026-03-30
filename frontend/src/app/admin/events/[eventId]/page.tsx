@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { SearchIcon, DownloadIcon, BuildingIcon, GridIcon, PlusIcon, QrIcon, ListIcon, ArrowLeftIcon, LocationIcon } from '@/components/Icons';
+import { SearchIcon, DownloadIcon, BuildingIcon, GridIcon, PlusIcon, QrIcon, ListIcon, CheckCircleIcon } from '@/components/Icons';
 
 type Participant = {
   _id: string; name: string; email: string; phone: string; college: string;
@@ -31,6 +31,91 @@ function StatCard({ label, val, color, sub }: { label: string; val: number; colo
   );
 }
 
+function MediaTab({ eventId, token }: { eventId: string, token: string }) {
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch(`http://localhost:5000/api/events/${eventId}/feedback`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.json()).then(setFeedbacks).catch(() => {});
+  }, [eventId, token]);
+
+  const handleUpload = async () => {
+    if (photos.length === 0) return;
+    setUploading(true);
+    const formData = new FormData();
+    photos.forEach(f => formData.append('photos', f));
+    try {
+      const res = await fetch(`http://localhost:5000/api/events/${eventId}/photos`, {
+         method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData
+      });
+      if (res.ok) {
+         setPhotos([]);
+         alert('Photos uploaded successfully!');
+      } else {
+         const data = await res.json();
+         alert('Upload failed: ' + data.message);
+      }
+    } catch (e) {
+      alert('Upload failed');
+    }
+    setUploading(false);
+  };
+
+  const toggleLanding = async (id: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/events/${eventId}/feedback/${id}/toggle-landing`, {
+         method: 'PATCH', headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setFeedbacks(fs => fs.map(f => f._id === id ? updated : f));
+      }
+    } catch (e) {}
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col gap-4">
+        <div>
+          <h3 className="font-extrabold text-xl text-[#0E1B3D] mb-1">Upload Event Photos</h3>
+          <p className="text-xs text-gray-400 font-medium">Select multiple images to push to the student event gallery.</p>
+        </div>
+        <input type="file" multiple accept="image/*" onChange={e => setPhotos(Array.from(e.target.files||[]))} 
+          className="text-sm border border-gray-200 p-3 rounded-xl bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-[#0E1B3D] file:text-white hover:file:bg-[#1a2d5a] transition-all" />
+        <button disabled={uploading || photos.length === 0} onClick={handleUpload} 
+          className="bg-[#e8631a] hover:bg-[#c24c10] text-white px-6 py-2.5 font-bold rounded-xl self-start disabled:opacity-50 transition-all shadow-sm">
+          {uploading ? 'Uploading...' : 'Publish Photos to Gallery'}
+        </button>
+      </div>
+
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+        <h3 className="font-extrabold text-xl text-[#0E1B3D] mb-6">Student Feedback ({feedbacks.length})</h3>
+        {feedbacks.length === 0 && <p className="text-sm text-gray-400 py-4">No feedback collected yet.</p>}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {feedbacks.map(f => (
+            <div key={f._id} className="p-5 border border-gray-100 rounded-2xl flex flex-col justify-between bg-gray-50/30 hover:shadow-md transition-shadow">
+              <div>
+                <p className="font-bold text-[#0E1B3D] mb-1">{f.studentName} <span className="text-xs text-gray-400 font-medium ml-1">({f.college})</span></p>
+                <div className="flex gap-1 mb-3 text-[#e8631a] text-sm">
+                  {Array.from({length: 5}).map((_,i) => <span key={i}>{i < f.rating ? '★' : '☆'}</span>)}
+                </div>
+                <p className="text-sm text-gray-600 mb-4 bg-white p-4 rounded-xl border border-gray-100">"{f.comment}"</p>
+              </div>
+              <button 
+                onClick={() => toggleLanding(f._id)}
+                className={`text-[11px] font-bold px-4 py-2 rounded-xl transition-all self-start flex items-center gap-2 ${f.isApprovedForLanding ? 'bg-emerald-500 text-white shadow shadow-emerald-500/20' : 'bg-white border text-gray-500 hover:border-gray-300 shadow-sm'}`}>
+                {f.isApprovedForLanding ? '★ FEATURED ON LANDING PAGE' : '☆ SHOW ON LANDING PAGE'}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminEventDashboard() {
   const { user, token } = useAuth();
   const router = useRouter();
@@ -44,6 +129,8 @@ export default function AdminEventDashboard() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [downloading, setDownloading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'PARTICIPANTS' | 'MEDIA'>('PARTICIPANTS');
+  const [completing, setCompleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -85,6 +172,20 @@ export default function AdminEventDashboard() {
     finally { setDownloading(false); }
   };
 
+  const markCompleted = async () => {
+    if (!token || !eventInfo || eventInfo.status === 'COMPLETED') return;
+    if (!confirm('Mark this event as completed?')) return;
+    setCompleting(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/events/${eventId}/complete`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) await fetchData();
+    } catch { /* silent */ }
+    finally { setCompleting(false); }
+  };
+
   const filtered = participants.filter(p => {
     const matchStatus = statusFilter === 'ALL' || p.status === statusFilter;
     const q = search.toLowerCase();
@@ -98,26 +199,27 @@ export default function AdminEventDashboard() {
 
   const headerTitle = (
     <div>
-      <Link href="/admin/events" className="text-gray-400 text-xs hover:text-gray-600 inline-flex items-center gap-1 mb-2">
-        <ArrowLeftIcon className="w-3 h-3" /> All Events
-      </Link>
-      <p className="text-[#e8631a] text-[10px] font-bold uppercase tracking-widest mb-1">Event Dashboard</p>
       {loading ? (
         <div className="h-8 w-60 bg-gray-200 rounded-lg animate-pulse"/>
       ) : (
         <span className="font-heading font-extrabold text-2xl text-[#0E1B3D]">{eventInfo?.name}</span>
-      )}
-      {eventInfo && (
-        <p className="text-gray-400 text-xs mt-1 flex items-center gap-1.5 font-medium"><LocationIcon className="w-3.5 h-3.5 text-[#e8631a]" /> {eventInfo.venue} <span className="text-gray-300 mx-1">•</span> ID: {eventInfo.eventId}</p>
       )}
     </div>
   );
 
   return (
     <AdminLayout 
+      backHref="/admin/events"
       title={headerTitle}
       headerActions={
         <>
+          {eventInfo?.status !== 'COMPLETED' && (
+            <button onClick={markCompleted} disabled={completing || loading}
+              className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow border border-emerald-200 disabled:opacity-50 w-full sm:w-auto">
+              {completing ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <CheckCircleIcon className="w-4 h-4" />}
+              Mark Completed
+            </button>
+          )}
           <Link href={`/admin/events/${eventId}/edit`}
             className="flex items-center justify-center gap-2 border border-[#0E1B3D]/30 text-[#0E1B3D] hover:bg-[#0E1B3D] hover:text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm bg-white w-full sm:w-auto">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -157,15 +259,24 @@ export default function AdminEventDashboard() {
           </div>
         )}
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        {eventInfo?.status === 'COMPLETED' && (
+          <div className="flex bg-white rounded-xl p-1 mb-6 border border-gray-100 w-fit shadow-sm">
+            <button onClick={() => setActiveTab('PARTICIPANTS')} className={`px-5 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'PARTICIPANTS' ? 'bg-[#0E1B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#0E1B3D] hover:bg-gray-50'}`}>Participants</button>
+            <button onClick={() => setActiveTab('MEDIA')} className={`px-5 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'MEDIA' ? 'bg-[#0E1B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#0E1B3D] hover:bg-gray-50'}`}>Media & Feedback</button>
+          </div>
+        )}
+
+        {activeTab === 'PARTICIPANTS' ? (
+          <>
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by name or email…"
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#e8631a] bg-white"/>
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-[#1C1A17] placeholder-gray-400 outline-none focus:border-[#e8631a] bg-white"/>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 hide-scrollbar shrink-0 w-[calc(100%+2rem)] sm:w-auto">
             {(['ALL','REGISTERED','WAITLISTED','CHECKED_IN'] as const).map(f => (
@@ -276,6 +387,10 @@ export default function AdminEventDashboard() {
             </div>
           )}
         </div>
+        </>
+        ) : (
+          <MediaTab eventId={eventId} token={token || ''} />
+        )}
       </div>
     </AdminLayout>
   );

@@ -5,7 +5,17 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { GridIcon, PlusIcon, ListIcon } from '@/components/Icons';
 
-export default function AdminLayout({ children, title, headerActions }: { children: ReactNode, title?: ReactNode, headerActions?: ReactNode }) {
+export default function AdminLayout({
+  children,
+  title,
+  headerActions,
+  backHref,
+}: {
+  children: ReactNode,
+  title?: ReactNode,
+  headerActions?: ReactNode,
+  backHref?: string,
+}) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -15,14 +25,24 @@ export default function AdminLayout({ children, title, headerActions }: { childr
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const links = [
-    { href: '/admin', label: 'Dashboard', Icon: GridIcon },
-    { href: '/admin/create-event', label: 'Create Event', Icon: PlusIcon },
-    { href: '/admin/events', label: 'All Events', Icon: ListIcon },
+  const links: { href: string; label: string; icon: React.ReactNode; badge?: string }[] = [
+    { href: '/admin', label: 'Dashboard', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+    ) },
+    { href: '/admin/create-event', label: 'Create Event', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+    ) },
+    { href: '/admin/events', label: 'All Events', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+    ) },
+    { href: '#', label: 'Settings', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+    ) },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] flex font-body">
+    <div className="flex h-screen bg-[#0E1B3D] text-white font-body selection:bg-[#e8631a] selection:text-white">
+      <style dangerouslySetInnerHTML={{__html: "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Syne:wght@800&display=swap');"}}/>
       {/* Mobile Backdrop */}
       {sidebarOpen && (
         <div 
@@ -37,53 +57,86 @@ export default function AdminLayout({ children, title, headerActions }: { childr
         transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:shrink-0
         ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
       `}>
-        <div className="mb-10 flex justify-between items-start">
-          <div>
-            <p className="text-[#e8631a] text-[15px] font-bold uppercase tracking-widest">⚡TechTrek</p>
-            <p className="text-white font-heading font-extrabold text-lg mt-1 leading-tight">GKT Command<br/>Center</p>
+        <div className="mb-6 flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-[#e8631a] rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-[#e8631a]/20">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/></svg>
+            </div>
+            <div className="flex flex-col">
+              <p className="text-white text-[22px] font-heading font-extrabold tracking-widest leading-none mb-1">TechTrek</p>
+              <p className="text-[#e8631a] text-[9px] font-bold uppercase tracking-[0.15em]">GKT Command Center</p>
+            </div>
           </div>
           <button onClick={closeSidebar} className="lg:hidden text-gray-400 hover:text-white p-1">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        <nav className="flex flex-col gap-1 flex-1">
+
+        <nav className="flex flex-col gap-4 flex-1 mt-2">
           {links.map(item => {
-            const active = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+            const active = pathname === item.href || (item.href !== '/admin' && item.href !== '#' && pathname.startsWith(item.href));
             return (
-              <Link key={item.href} href={item.href} onClick={closeSidebar}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${active ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white'}`}>
-                <item.Icon className="w-4 h-4" />{item.label}
+              <Link key={item.label} href={item.href} onClick={item.href !== '#' ? closeSidebar : undefined}
+                className={`flex items-center justify-between w-full px-4 py-3.5 rounded-xl text-[14px] font-bold transition-all relative ${
+                  active 
+                    ? 'bg-white/5 text-white shadow-sm border border-white/5 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:bg-[#e8631a] before:rounded-r-full overflow-hidden' 
+                    : 'text-white/60 hover:bg-white/5 hover:text-white border border-transparent'
+                }`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 transition-colors ${
+                    active ? 'bg-[#e8631a] text-white shadow-md shadow-[#e8631a]/30' : 'bg-white/5 text-white/60 group-hover:bg-white/10 group-hover:text-white'
+                  }`}>
+                    {item.icon}
+                  </div>
+                  {item.label}
+                </div>
+                {item.badge && (
+                  <span className="bg-[#e8631a] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             )
           })}
         </nav>
 
-        <div className="border-t border-white/10 pt-4">
-          <p className="text-white/60 text-[11px] font-semibold truncate">{user.name}</p>
-          <p className="text-white/30 text-[10px] truncate mb-3">{user.email}</p>
+        <div className="border-t border-white/5 pt-4 mt-auto">
+          <div className="text-center mb-4">
+            <p className="text-[13px] font-[DM_Sans] font-bold text-white/80">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+          </div>
           <button onClick={() => { logout(); router.push('/admin/login'); }}
-            className="text-xs text-red-400 hover:text-white hover:bg-red-500/30 font-bold transition-all px-3 py-1.5 rounded-lg w-full text-left">
-            Sign Out →
+            className="flex items-center justify-center gap-3 w-full bg-white/[0.08] text-white hover:bg-[#e8631a] py-3.5 px-4 rounded-xl font-bold transition-all duration-300 text-xs tracking-widest uppercase border border-white/10 shadow-sm group">
+            <svg className="w-4 h-4 flex-shrink-0 text-[#e8631a] group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign Out
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden bg-[#FAF7F2]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
         {/* Responsive Header */}
-        <header className="bg-white border-b border-gray-100 shrink-0 sticky top-0 z-10">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <header className="bg-[#FAF7F2]/80 backdrop-blur-md border-b border-[#E8DDD0] shrink-0 sticky top-0 z-10 py-6 min-h-[88px] flex items-center">
+          <div className="px-4 sm:px-6 lg:px-8 w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <button 
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+                className="lg:hidden p-2 -ml-2 text-[#7A7166] hover:bg-[#E8DDD0]/50 rounded-lg transition-colors shrink-0"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
               </button>
-              <div className="min-w-0 flex-1">
-                <div className="font-heading font-extrabold text-xl sm:text-2xl lg:text-3xl text-[#0E1B3D] leading-none truncate">{title || 'Dashboard'}</div>
-                {title === 'Dashboard' && <p className="text-gray-400 text-xs mt-1">Welcome back, {user.name.split(' ')[0]}</p>}
+              <div className="min-w-0 flex-1 flex items-center gap-3">
+                {title !== 'Dashboard' && (
+                  <Link href={backHref || "/admin"} className="text-[#C84B11] hover:text-[#E8622A] p-2 bg-[#E8DDD0]/50 rounded-xl transition-colors flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                  </Link>
+                )}
+                <div>
+                  <div className="text-[22px] text-[#1C1A17] leading-none truncate" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800 }}>{title || 'Dashboard'}</div>
+                  {title === 'Dashboard' && <p className="text-[#7A7166] tracking-wide text-xs mt-1.5 font-bold font-[DM_Sans] select-none uppercase">Welcome back, {user?.name?.split(' ')[0]}</p>}
+                </div>
               </div>
             </div>
             
@@ -96,8 +149,8 @@ export default function AdminLayout({ children, title, headerActions }: { childr
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-auto">
-          <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="flex-1 overflow-auto bg-[#FAF7F2]">
+          <div className="p-4 sm:p-5 h-full">
             {children}
           </div>
         </div>

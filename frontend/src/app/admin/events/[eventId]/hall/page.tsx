@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import AdminLayout from '@/components/admin/AdminLayout';
 import VenueMap from '@/components/VenueMap';
 import type { HallLayoutData } from '@/components/VenueMap';
 
@@ -52,36 +53,13 @@ export default function AttachHallPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] font-body flex">
-      {/* Sidebar */}
-      <aside className="w-60 bg-[#0E1B3D] text-white flex flex-col py-8 px-5 shrink-0">
-        <div className="mb-10">
-          <p className="text-[#e8631a] text-xs font-bold uppercase tracking-widest">TechTrek</p>
-          <p className="text-white font-heading font-extrabold text-lg mt-1">Admin Panel</p>
-        </div>
-        <nav className="flex flex-col gap-1">
-          {[
-            { href: '/admin', label: 'Dashboard', icon: '▦' },
-            { href: '/admin/events', label: 'Events', icon: '◈' },
-            { href: '/admin/create-event', label: 'Create Event', icon: '+' },
-          ].map(item => (
-            <Link key={item.href} href={item.href}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all text-sm font-medium">
-              <span>{item.icon}</span>{item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-
-      <main className="flex-1 px-8 py-8">
-        <div className="max-w-3xl mx-auto">
+    <AdminLayout title="Attach Hall Layout" backHref="/admin/events">
+      <div className="max-w-3xl mx-auto w-full py-2 sm:py-4">
           <div className="mb-8">
-            <Link href="/admin/events" className="text-gray-400 text-sm hover:text-gray-600">← Back to Events</Link>
-            <h1 className="font-heading font-extrabold text-3xl text-[#0E1B3D] mt-2">Attach Hall Layout</h1>
-            <p className="text-gray-500 text-sm mt-1">Event ID: <strong>{eventId}</strong></p>
+            <p className="text-gray-500 text-sm mt-1">Choose a saved hall layout and attach it to this event.</p>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 space-y-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 sm:p-8 space-y-6">
             {halls.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-gray-500 mb-4">No saved hall layouts yet.</p>
@@ -95,12 +73,12 @@ export default function AttachHallPage() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Select Hall Layout</label>
                   <div className="space-y-3">
                     {halls.map(h => (
-                      <label key={h._id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedHallId === h._id ? 'border-[#e8631a] bg-[#e8631a]/10' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <label key={h._id} className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedHallId === h._id ? 'border-[#e8631a] bg-[#e8631a]/10' : 'border-gray-200 hover:border-gray-300'}`}>
                         <input type="radio" name="hall" value={h._id} checked={selectedHallId === h._id}
-                          onChange={() => handleSelect(h._id)} className="accent-[#e8631a]"/>
-                        <div>
+                          onChange={() => handleSelect(h._id)} className="accent-[#e8631a] mt-1 shrink-0"/>
+                        <div className="min-w-0">
                           <p className="font-bold text-[#0E1B3D]">{h.hall_name}</p>
-                          <p className="text-xs text-gray-500">{h.total_rows} rows × {h.seats_per_row} seats/row · Stage: {h.stage_position} · Entry: {h.entry_points}</p>
+                          <p className="text-xs text-gray-500 leading-relaxed">{h.total_rows} rows × {h.seats_per_row} seats/row · Stage: {h.stage_position} · Entry: {h.entry_points}</p>
                         </div>
                       </label>
                     ))}
@@ -127,8 +105,7 @@ export default function AttachHallPage() {
               </>
             )}
           </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

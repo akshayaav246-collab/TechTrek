@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
@@ -10,6 +11,7 @@ const checkinRoutes = require('./routes/checkinRoutes');
 const superadminRoutes = require('./routes/superadminRoutes');
 const hallRoutes = require('./routes/hallRoutes');
 const seatRoutes = require('./routes/seatRoutes');
+const speakerRoutes = require('./routes/speakerRoutes');
 const { startSeatReminderCron } = require('./services/seatCron');
 
 // Connect to Database
@@ -19,6 +21,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
@@ -27,6 +30,7 @@ app.use('/api/checkin', checkinRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/halls', hallRoutes);
 app.use('/api/seats', seatRoutes);
+app.use('/api/speakers', speakerRoutes);
 
 // Base route
 app.get('/', (req, res) => {

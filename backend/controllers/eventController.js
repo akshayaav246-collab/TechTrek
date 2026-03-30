@@ -1,5 +1,32 @@
 const Event = require('../models/Event');
 const Registration = require('../models/Registration');
+const Feedback = require('../models/Feedback');
+const Speaker = require('../models/Speaker');
+const { normalizeName } = require('./speakerController');
+
+const syncSpeakerLibrary = async (speakers = [], user) => {
+  const filledSpeakers = speakers
+    .filter(speaker => speaker && typeof speaker.name === 'string' && speaker.name.trim())
+    .map(speaker => ({
+      name: speaker.name.trim(),
+      normalizedName: normalizeName(speaker.name),
+      role: (speaker.role || '').trim(),
+      company: (speaker.company || '').trim(),
+      bio: (speaker.bio || '').trim(),
+    }));
+
+  if (!filledSpeakers.length || !user?._id) return;
+
+  await Promise.all(
+    filledSpeakers.map(speaker =>
+      Speaker.findOneAndUpdate(
+        { createdBy: user._id, normalizedName: speaker.normalizedName },
+        { $set: { ...speaker, createdBy: user._id } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      )
+    )
+  );
+};
 
 // @desc    Get all events (public)
 // @route   GET /api/events
@@ -24,13 +51,11 @@ const getEventById = async (req, res) => {
   }
 };
 
-// @desc    Admin creates a new event
-// @route   POST /api/events
 const createEvent = async (req, res) => {
   try {
     const {
       name, collegeName, collegeDomain, city, venue,
-      dateTime, capacity, description, topics, speakers, agenda, hallLayoutId
+      dateTime, endDateTime, capacity, description, topics, speakers, agenda, days, hallLayoutId
     } = req.body;
 
     if (!name || !collegeName || !collegeDomain || !city || !venue || !dateTime || !capacity) {
@@ -41,11 +66,17 @@ const createEvent = async (req, res) => {
     const count = await Event.countDocuments();
     const eventId = `evt-${String(count + 1).padStart(3, '0')}`;
 
+    await syncSpeakerLibrary(speakers, req.user);
+
     const event = await Event.create({
       eventId, name, collegeName, collegeDomain, city, venue,
-      dateTime: new Date(dateTime), capacity: Number(capacity),
+      dateTime: new Date(dateTime),
+      ...(endDateTime ? { endDateTime: new Date(endDateTime) } : {}),
+      capacity: Number(capacity),
       description, topics: topics || [],
-      speakers: speakers || [], agenda: agenda || [],
+      speakers: speakers || [],
+      agenda: agenda || [],
+      days: days || [],
       createdBy: req.user._id,
       ...(hallLayoutId ? { hallLayout: hallLayoutId } : {}),
     });
@@ -55,6 +86,7 @@ const createEvent = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // @desc    Get events created by this admin
 // @route   GET /api/events/mine
@@ -265,23 +297,28 @@ const exportCSV = async (req, res) => {
   }
 };
 
-// @desc  Update event details (admin)
-// @route PUT /api/events/:eventId
 const updateEvent = async (req, res) => {
   try {
     const event = await Event.findOne({ eventId: req.params.eventId });
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
-    const allowed = ['name','collegeName','collegeDomain','city','venue','dateTime','capacity','description','topics','speakers','agenda','status','amount'];
+    const allowed = [
+      'name','collegeName','collegeDomain','city','venue','dateTime','endDateTime',
+      'capacity','description','topics','speakers','agenda','days','status','amount'
+    ];
     allowed.forEach(field => {
       if (req.body[field] !== undefined) event[field] = req.body[field];
     });
+    if (req.body.speakers !== undefined) {
+      await syncSpeakerLibrary(req.body.speakers, req.user);
+    }
     await event.save();
     res.json(event);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // @desc  Delete event (admin)
 // @route DELETE /api/events/:eventId
@@ -337,5 +374,76 @@ const getEventColleges = async (req, res) => {
   }
 };
 
-module.exports = { getEvents, getEventById, createEvent, getMyEvents, getEventDashboard, markEventCompleted, getAdminAnalytics, attachHallLayout, getParticipants, exportCSV, updateEvent, deleteEvent, startCheckin, getEventColleges };
+const uploadPhotos = async (req, res) => {
+  try {
+    const event = await Event.findOne({ eventId: req.params.eventId });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
 
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'No files uploaded' });
+    }
+
+    const paths = req.files.map(file => '/uploads/' + file.filename);
+    event.photos.push(...paths);
+    await event.save();
+    res.json({ photos: event.photos });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const addFeedback = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const event = await Event.findOne({ eventId: req.params.eventId });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (event.status !== 'COMPLETED') return res.status(400).json({ message: 'Event is not completed yet.' });
+
+    const exists = await Feedback.findOne({ eventId: event.eventId, studentId: req.user._id });
+    if (exists) return res.status(400).json({ message: 'You already submitted feedback for this event.' });
+
+    const fb = await Feedback.create({
+      eventId: event.eventId,
+      studentId: req.user._id,
+      studentName: req.user.name,
+      college: req.user.college,
+      rating: Number(rating),
+      comment
+    });
+    res.status(201).json(fb);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getEventFeedback = async (req, res) => {
+  try {
+    const feedback = await Feedback.find({ eventId: req.params.eventId }).sort({ createdAt: -1 });
+    res.json(feedback);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const toggleFeedbackLanding = async (req, res) => {
+  try {
+    const fb = await Feedback.findById(req.params.feedbackId);
+    if (!fb) return res.status(404).json({ message: 'Feedback not found' });
+    fb.isApprovedForLanding = !fb.isApprovedForLanding;
+    await fb.save();
+    res.json(fb);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getFeaturedFeedback = async (req, res) => {
+  try {
+    const fb = await Feedback.find({ isApprovedForLanding: true }).sort({ createdAt: -1 });
+    res.json(fb);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getEvents, getEventById, createEvent, getMyEvents, getEventDashboard, markEventCompleted, getAdminAnalytics, attachHallLayout, getParticipants, exportCSV, updateEvent, deleteEvent, startCheckin, getEventColleges, uploadPhotos, addFeedback, getEventFeedback, toggleFeedbackLanding, getFeaturedFeedback };

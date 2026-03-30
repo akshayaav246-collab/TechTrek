@@ -11,7 +11,7 @@ type FreshUser = {
 };
 
 type EventReg = {
-  _id: string; status: string; qrCode?: string; checkedIn?: boolean; createdAt: string;
+  _id: string; status: string; qrCode?: string; checkedIn?: boolean; checkedInAt?: string; createdAt: string; hasSubmittedFeedback?: boolean;
   event: { eventId: string; name: string; collegeName: string; city: string; venue: string; dateTime: string; status: string };
 };
 
@@ -62,6 +62,10 @@ export default function ProfilePage() {
   const [registrations, setRegistrations] = useState<EventReg[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedQR, setExpandedQR] = useState<string | null>(null);
+  const [feedbackTarget, setFeedbackTarget] = useState<EventReg | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const [pwData, setPwData] = useState({ currentPassword: '', newPassword: '' });
   const [pwMsg, setPwMsg] = useState({ type: '', text: '' });
@@ -115,6 +119,75 @@ export default function ProfilePage() {
     a.download = `techtrek-ticket-${eventId}.png`; a.click();
   };
 
+  const downloadCertificate = (registration: EventReg) => {
+    const attendee = displayUser.name;
+    const event = registration.event;
+    const checkedInDate = registration.checkedInAt
+      ? new Date(registration.checkedInAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+      : new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1131" viewBox="0 0 1600 1131">
+        <defs>
+          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fff8ef" />
+            <stop offset="100%" stop-color="#f5eee1" />
+          </linearGradient>
+          <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#e8631a" />
+            <stop offset="100%" stop-color="#0E1B3D" />
+          </linearGradient>
+        </defs>
+        <rect width="1600" height="1131" fill="url(#bg)" />
+        <rect x="42" y="42" width="1516" height="1047" rx="32" fill="none" stroke="url(#accent)" stroke-width="8" />
+        <text x="800" y="170" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-weight="700" fill="#e8631a">TECHTREK</text>
+        <text x="800" y="255" text-anchor="middle" font-family="Georgia, serif" font-size="70" font-weight="700" fill="#0E1B3D">Certificate of Participation</text>
+        <text x="800" y="355" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#7A7166">This certifies that</text>
+        <text x="800" y="470" text-anchor="middle" font-family="Georgia, serif" font-size="68" font-weight="700" fill="#0E1B3D">${attendee}</text>
+        <text x="800" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#7A7166">successfully attended and completed participation in</text>
+        <text x="800" y="655" text-anchor="middle" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#e8631a">${event.name}</text>
+        <text x="800" y="725" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#0E1B3D">${event.collegeName} · ${event.city}</text>
+        <text x="800" y="770" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#7A7166">${checkedInDate}</text>
+        <line x1="230" y1="940" x2="560" y2="940" stroke="#0E1B3D" stroke-width="3" />
+        <line x1="1040" y1="940" x2="1370" y2="940" stroke="#0E1B3D" stroke-width="3" />
+        <text x="395" y="980" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#0E1B3D">TechTrek Team</text>
+        <text x="1205" y="980" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#0E1B3D">Authorized Signatory</text>
+      </svg>
+    `.trim();
+
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${registration.event.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-certificate.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const submitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackTarget || !token) return;
+    setSubmittingFeedback(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/events/${feedbackTarget.event.eventId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ rating: feedbackRating, comment: feedbackComment }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to submit feedback');
+
+      setRegistrations(prev => prev.map(reg => reg._id === feedbackTarget._id ? { ...reg, hasSubmittedFeedback: true } : reg));
+      setFeedbackTarget(null);
+      setFeedbackComment('');
+      setFeedbackRating(5);
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit feedback');
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
   if (!ctxUser) return null;
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -135,6 +208,53 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background pt-24 pb-16 font-body">
+      {feedbackTarget && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-border p-6 sm:p-8 relative">
+            <button onClick={() => setFeedbackTarget(null)} className="absolute right-5 top-5 w-9 h-9 rounded-full border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors">
+              ×
+            </button>
+            <p className="text-primary text-xs font-bold uppercase tracking-widest mb-2">Event Feedback</p>
+            <h3 className="font-heading font-extrabold text-2xl text-secondary mb-2">{feedbackTarget.event.name}</h3>
+            <p className="text-sm text-foreground/60 mb-6">Submit your feedback to unlock your participation certificate.</p>
+            <form onSubmit={submitFeedback} className="space-y-5">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-foreground/50 mb-2 block">Rating</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFeedbackRating(star)}
+                      className={`text-3xl transition-transform hover:scale-110 ${feedbackRating >= star ? 'text-primary' : 'text-gray-200'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-widest text-foreground/50 mb-2 block">Comment</label>
+                <textarea
+                  value={feedbackComment}
+                  onChange={e => setFeedbackComment(e.target.value)}
+                  required
+                  rows={4}
+                  className="w-full bg-background border border-border rounded-2xl px-4 py-3 text-sm text-secondary outline-none focus:border-primary resize-none"
+                  placeholder="Share your experience at this event..."
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={submittingFeedback}
+                className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-[#d4741a] transition-colors disabled:opacity-50"
+              >
+                {submittingFeedback ? 'Submitting Feedback…' : 'Submit Feedback'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Page header */}
@@ -187,7 +307,7 @@ export default function ProfilePage() {
                       value={pwData.currentPassword}
                       onChange={e => setPwData({...pwData, currentPassword: e.target.value})}
                       required
-                      className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors"
+                      className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-sm text-[#1C1A17] placeholder:text-foreground/40 outline-none focus:border-[#e8631a] transition-colors"
                     />
                     <input 
                       type="password" 
@@ -195,7 +315,7 @@ export default function ProfilePage() {
                       value={pwData.newPassword}
                       onChange={e => setPwData({...pwData, newPassword: e.target.value})}
                       required
-                      className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors"
+                      className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-sm text-[#1C1A17] placeholder:text-foreground/40 outline-none focus:border-[#e8631a] transition-colors"
                     />
                     <button 
                       type="submit" 
@@ -245,6 +365,8 @@ export default function ProfilePage() {
                   const dateStr = new Date(evt.dateTime).toLocaleDateString('en-IN', {
                     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
                   });
+                  const canGiveFeedback = evt.status === 'COMPLETED' && reg.checkedIn && !reg.hasSubmittedFeedback;
+                  const canDownloadCertificate = evt.status === 'COMPLETED' && reg.checkedIn && reg.hasSubmittedFeedback;
 
                   return (
                     <div key={reg._id} className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -301,8 +423,24 @@ export default function ProfilePage() {
                         </div>
                       )}
 
-                      <div className="flex justify-end px-5 py-2.5 border-t border-border bg-black/[0.02]">
-                        <Link href={`/events/${evt.eventId}`} className="text-primary text-xs font-bold hover:underline">
+                      <div className="flex flex-wrap justify-end gap-2 px-5 py-3 border-t border-border bg-black/[0.02]">
+                        {canGiveFeedback && (
+                          <button
+                            onClick={() => setFeedbackTarget(reg)}
+                            className="text-xs font-bold px-3 py-2 rounded-lg bg-primary text-white hover:bg-[#d4741a] transition-colors"
+                          >
+                            Give Feedback
+                          </button>
+                        )}
+                        {canDownloadCertificate && (
+                          <button
+                            onClick={() => downloadCertificate(reg)}
+                            className="text-xs font-bold px-3 py-2 rounded-lg border border-secondary text-secondary hover:bg-secondary hover:text-white transition-colors"
+                          >
+                            Download Certificate
+                          </button>
+                        )}
+                        <Link href={`/events/${evt.eventId}`} className="text-primary text-xs font-bold hover:underline px-1 py-2">
                           View Event →
                         </Link>
                       </div>

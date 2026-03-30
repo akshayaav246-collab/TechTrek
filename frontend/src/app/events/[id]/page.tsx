@@ -2,11 +2,15 @@ import { notFound } from 'next/navigation';
 import { Section } from '@/components/ui/Section';
 import { Card } from '@/components/ui/Card';
 import { EventSidebarWrapper } from '@/components/events/EventSidebarWrapper';
-import { CalendarIcon, StarIcon, ClockIcon, MicIcon, TagIcon } from '@/components/Icons';
+import { SpeakerCarousel } from '@/components/events/SpeakerCarousel';
+import { SummitAgenda } from '@/components/events/SummitAgenda';
+import { CalendarIcon, StarIcon, ClockIcon, MicIcon, TagIcon, LocationIcon } from '@/components/Icons';
+import { EventMediaAndFeedback } from '@/components/events/EventMediaAndFeedback';
 import Link from 'next/link';
 
 type Speaker = { _id: string; name: string; role: string; company: string; bio: string };
 type AgendaItem = { _id: string; time: string; title: string; duration: string; speaker?: string };
+type DaySchedule = { day: number; label?: string; agenda: AgendaItem[] };
 
 export default async function EventDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,137 +28,167 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
     return date.toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
 
+  const formatShortDate = (isoString: string) => {
+    return new Date(isoString).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const isMultiDay = Array.isArray(event.days) && event.days.length > 0;
+  const totalDays = isMultiDay ? event.days.length : 1;
+
   const fillPercentage = Math.min(100, Math.round((event.registeredCount / event.capacity) * 100));
 
   return (
-    <div className="pt-20 bg-background min-h-screen font-body">
+    <div className="bg-[#F9F8F6] min-h-screen font-body w-full">
       {/* Header Section */}
-      <Section className="bg-secondary text-white py-16 md:py-24 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[30rem] h-[30rem] bg-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <Link href="/events" className="inline-flex items-center text-white/60 hover:text-white transition-colors mb-10 text-sm font-bold uppercase tracking-widest group">
-            <span className="mr-2 transition-transform group-hover:-translate-x-1">←</span> Back to Events
-          </Link>
-          <div className="flex flex-wrap items-center gap-4 mb-6">
-            <span className={`inline-block px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${event.status === 'UPCOMING' ? 'bg-primary text-white shadow-md' : 'bg-white/20 text-white/80'}`}>
-              {event.status}
-            </span>
-          </div>
-          <h1 className="font-heading font-extrabold text-5xl md:text-7xl mb-6 leading-tight tracking-tight drop-shadow-md">{event.name}</h1>
-          <p className="text-2xl md:text-3xl text-white/80 mb-10 font-medium">{event.collegeName} <span className="text-primary mx-3 opacity-50">•</span> {event.city}</p>
-          <div className="flex items-center gap-4 text-white font-bold text-lg md:text-xl bg-black/20 w-fit px-8 py-4 rounded-2xl border border-white/10 backdrop-blur-sm shadow-inner">
-            <CalendarIcon className="text-primary w-6 h-6" /> {formatDate(event.dateTime)}
-          </div>
-        </div>
-      </Section>
-
-      {/* Main Content Grid */}
-      <Section className="py-16 md:py-24 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16 items-start">
-            
-            {/* Left Column (Content) */}
-            <div className="lg:col-span-2 flex flex-col gap-16 md:gap-24">
+      <section className="bg-[#0E1B3D] w-full text-white pt-10 md:pt-14 pb-4 relative h-[85vh] min-h-[600px] overflow-hidden flex flex-col">
+        {/* Subtle grid background */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E\")" }}></div>
+        <div className="absolute top-0 right-0 w-[20rem] h-[20rem] md:w-[40rem] md:h-[40rem] bg-[#e8631a]/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+        
+        {/* Absolute Back Button */}
+        <Link href="/events" className="absolute top-6 left-6 md:top-8 md:left-10 z-50 inline-flex items-center text-white/50 hover:text-white transition-colors text-xs md:text-sm font-bold uppercase tracking-[0.15em] group w-fit">
+          <span className="mr-2 transition-transform group-hover:-translate-x-1">←</span> Back to Events
+        </Link>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full flex-1 flex flex-col justify-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 xl:gap-24 items-center mt-4 md:mt-0">
+            {/* Left Column - Hero Content */}
+            <div className="flex flex-col items-start text-left font-heading">
+              <div className="flex flex-wrap items-center gap-4 mb-3 md:mb-5">
+                <span className={`inline-block px-3 py-1.5 md:px-5 md:py-2.5 rounded-full text-[10px] md:text-[11px] font-bold uppercase tracking-[0.15em] border ${event.status === 'UPCOMING' ? 'border-[#e8631a]/30 text-[#e8631a] bg-[#e8631a]/10' : 'border-white/20 text-white/50'}`}>
+                  • {event.status}
+                </span>
+                {isMultiDay && (
+                  <span className="inline-block px-3 py-1.5 md:px-5 md:py-2.5 rounded-full text-[10px] md:text-[11px] font-bold uppercase tracking-[0.15em] border border-blue-400/30 text-blue-300 bg-blue-400/10">
+                    {totalDays}-Day Summit
+                  </span>
+                )}
+              </div>
               
-              {/* About Event */}
-              <div className="bg-card border border-border p-8 md:p-12 rounded-3xl shadow-sm">
-                <h2 className="font-heading font-bold text-3xl md:text-4xl text-secondary mb-6 flex items-center gap-4">
-                  <StarIcon className="text-primary w-6 h-6" /> About Event
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.5rem] font-heading font-extrabold text-white mb-3 md:mb-5 tracking-tight leading-[1.05] drop-shadow-md">
+                {event.name.split('@').map((part: string, index: number) => (
+                  index === 0 ? <span key={index}>{part.trim()}</span> : <span key={index} className="text-[#e8631a] block mt-1">@ {part.trim()}</span>
+                ))}
+              </h1>
+              
+              <p className="text-sm md:text-lg lg:text-xl text-white/60 mb-5 md:mb-8 font-medium tracking-wide leading-relaxed max-w-lg">
+                Join the biggest tech gathering at <strong className="text-white/90">{event.collegeName}</strong> in {event.city}. Two tracks. One unforgettable afternoon. No limits.
+              </p>
+              
+              <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-6 md:mb-10">
+                <div className="flex items-center gap-2 md:gap-3 text-white/80 font-bold text-[10px] md:text-sm bg-white/5 px-4 py-2.5 md:px-5 md:py-3 rounded-xl border border-white/5 backdrop-blur-sm shadow-sm">
+                  <CalendarIcon className="text-[#e8631a] w-3 h-3 md:w-4 md:h-4 opacity-80" />
+                  {isMultiDay && event.endDateTime
+                    ? `${formatShortDate(event.dateTime)} – ${formatShortDate(event.endDateTime)}`
+                    : formatDate(event.dateTime).split(' at ')[0]}
+                </div>
+                <div className="flex items-center gap-2 md:gap-3 text-white/80 font-bold text-[10px] md:text-sm bg-white/5 px-4 py-2.5 md:px-5 md:py-3 rounded-xl border border-white/5 backdrop-blur-sm shadow-sm">
+                  <ClockIcon className="text-[#e8631a] w-3 h-3 md:w-4 md:h-4 opacity-80" />
+                  {isMultiDay ? `${totalDays} Days` : (formatDate(event.dateTime).includes(' at ') ? formatDate(event.dateTime).split(' at ')[1] + ' onwards' : '3:30 PM onwards')}
+                </div>
+                <div className="flex items-center gap-2 md:gap-3 text-white/80 font-bold text-[10px] md:text-sm bg-white/5 px-4 py-2.5 md:px-5 md:py-3 rounded-xl border border-white/5 backdrop-blur-sm shadow-sm">
+                  <LocationIcon className="text-[#e8631a] w-3 h-3 md:w-4 md:h-4 opacity-80" /> {event.venue}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column - About Event */}
+            <div className="flex flex-col justify-center lg:pl-10 relative z-20 w-full h-auto">
+              <div className="bg-[#0E1B3D] border-2 border-white/20 p-8 md:p-10 rounded-[2rem] shadow-[0_0_40px_rgba(255,255,255,0.05)] relative overflow-hidden flex flex-col w-full">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#e8631a]/5 rounded-full blur-[40px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                <h2 className="text-sm md:text-xl font-bold uppercase tracking-[0.2em] text-[#e8631a] mb-4 md:mb-5 flex items-center gap-3 relative z-10 shrink-0">
+                  <span className="w-6 md:w-8 h-px bg-[#e8631a]"></span> About the Event
                 </h2>
-                <p className="text-lg md:text-xl text-foreground/80 leading-relaxed font-medium">
-                  {event.description}
-                </p>
+                <div className="relative z-10">
+                  <p className="text-sm md:text-base lg:text-lg text-white/70 leading-relaxed font-medium">
+                    {event.description}
+                  </p>
+                </div>
                 
                 {/* Topics */}
-                <div className="flex flex-wrap gap-4 mt-10 pt-10 border-t border-border items-center">
-                  <span className="text-xs font-bold text-foreground/50 uppercase tracking-widest mr-2">Tags:</span>
+                <div className="flex flex-wrap gap-2 mt-8 relative z-10 shrink-0 border-t border-white/5 pt-6">
                   {(event.topics as string[]).map((topic: string) => (
-                    <span key={topic} className="px-5 py-2.5 bg-primary/5 rounded-xl text-sm font-bold text-primary border border-primary/20 hover:bg-primary hover:text-white transition-colors cursor-default shadow-sm hover:shadow-md">
+                    <span key={topic} className="px-3 py-1.5 bg-white/5 border border-white/5 rounded-xl text-[10px] md:text-xs font-bold text-white/60 hover:text-[#e8631a] transition-all shadow-sm">
                       #{topic.replace(/\s+/g, '')}
                     </span>
                   ))}
                 </div>
-              </div>
 
-              {/* Agenda Section */}
-              <div>
-                <h2 className="font-heading font-bold text-3xl md:text-4xl text-secondary mb-12 flex items-center gap-4">
-                  <ClockIcon className="text-primary w-7 h-7" /> Summit Agenda
-                </h2>
-                <div className="flex flex-col gap-10 pl-6 border-l-[3px] border-border ml-4 md:ml-6 relative">
-                  {(event.agenda as AgendaItem[]).map((item: AgendaItem, i: number) => (
-                    <div key={i} className="relative pl-8 md:pl-10 group">
-                      {/* Timeline dot */}
-                      <div className="absolute -left-[45px] md:-left-[53px] top-1 w-6 h-6 rounded-full bg-border group-hover:bg-primary transition-colors ring-[6px] ring-background flex items-center justify-center shadow-sm">
-                        <div className="w-2 h-2 bg-background rounded-full"></div>
-                      </div>
-                      
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-5 mb-3">
-                        <span className="font-bold text-primary text-2xl tracking-tight">{item.time}</span>
-                        <span className="text-xs font-bold text-foreground/60 uppercase bg-black/5 px-3 py-1.5 rounded-lg border border-black/5 w-fit tracking-wider">
-                          Duration: {item.duration}
-                        </span>
-                      </div>
-                      <h4 className="text-2xl md:text-3xl font-bold text-secondary mb-4 leading-snug drop-shadow-sm">{item.title}</h4>
-                      
-                      {item.speaker && (
-                        <div className="flex items-center gap-4 mt-5">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-sm font-bold shadow-inner border border-white/20">
-                            {item.speaker.charAt(0)}
-                          </div>
-                          <div className="text-sm font-bold text-foreground/70 bg-card border border-border px-5 py-2.5 rounded-xl shadow-sm">
-                            Led by: <span className="text-secondary ml-1">{item.speaker}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Speakers Section */}
-              {(event.speakers as Speaker[]).length > 0 && (
-                <div>
-                  <h2 className="font-heading font-bold text-3xl md:text-4xl text-secondary mb-12 flex items-center gap-4">
-                    <MicIcon className="text-primary w-7 h-7" /> Featured Speakers
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {(event.speakers as Speaker[]).map((speaker: Speaker) => (
-                      <Card key={speaker._id} className="border border-border p-8 md:p-10 hover:shadow-xl transition-all duration-300 bg-card group relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150 pointer-events-none"></div>
-                        <div className="flex items-center justify-between mb-6 relative z-10">
-                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bebas text-4xl shadow-inner border-2 border-white/50">
-                            {speaker.name.charAt(0)}
-                          </div>
-                          <div className="bg-black/5 px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest text-foreground/50 border border-black/5">Speaker</div>
-                        </div>
-                        <h4 className="font-bold text-2xl text-secondary mb-2 relative z-10">{speaker.name}</h4>
-                        <p className="text-primary font-bold text-sm mb-5 tracking-wide relative z-10 uppercase">{speaker.role} <span className="text-foreground/40 mx-2">|</span> <span className="text-foreground/80">{speaker.company}</span></p>
-                        <p className="text-base text-foreground/70 leading-relaxed font-medium relative z-10">{speaker.bio}</p>
-                      </Card>
-                    ))}
+                {/* Stats Integrated */}
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-8 pt-6 border-t border-white/5 relative z-10 shrink-0">
+                  <div className="text-center md:text-left relative group">
+                    <p className="font-heading font-black text-3xl md:text-4xl text-white mb-1 tracking-tight">{event.capacity}</p>
+                    <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Total</p>
+                  </div>
+                  <div className="text-center md:text-left relative group border-l border-white/5 pl-2 sm:pl-4">
+                    <p className="font-heading font-black text-3xl md:text-4xl text-white mb-1 tracking-tight">{Math.max(0, event.capacity - event.registeredCount)}</p>
+                    <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-[#e8631a]/80">Available</p>
+                  </div>
+                  <div className="text-center md:text-left relative group border-l border-white/5 pl-2 sm:pl-4">
+                    <p className="font-heading font-black text-3xl md:text-4xl text-white mb-1 tracking-tight">{(event.speakers as any[]).length || '12'} {((event.speakers as any[]).length || 12) > 10 ? '+' : ''}</p>
+                    <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Speakers</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll button */}
+        <div className="relative w-full flex justify-center mt-auto pb-4 pt-8 z-30 shrink-0">
+           <a href="#register-section" className="flex flex-col items-center gap-2 text-white/40 hover:text-white transition-colors group">
+             <span className="text-[8px] md:text-[9px] font-bold uppercase tracking-[0.2em]">Scroll to Register</span>
+             <div className="w-5 h-8 md:w-6 md:h-10 rounded-full border border-white/20 flex justify-center p-1 group-hover:border-white/40 group-hover:bg-[#e8631a]/10 transition-all">
+               <div className="w-1 h-2 md:w-1 md:h-2.5 bg-[#e8631a] rounded-full animate-bounce mt-0.5"></div>
+             </div>
+           </a>
+        </div>
+      </section>
+
+      {/* Main Content */}
+      <section className="py-16 md:py-24 w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16 items-start">
+            
+            {/* Left Column (Content) */}
+            <div className="lg:col-span-2 flex flex-col gap-16 md:gap-24 relative z-10 w-full min-w-0">
+              {/* Summit Agenda */}
+              <SummitAgenda agenda={event.agenda as AgendaItem[]} days={event.days as DaySchedule[]} />
+              
+              {event.status === 'COMPLETED' && (
+                 <EventMediaAndFeedback eventId={event.eventId} photos={event.photos || []} />
               )}
-              {/* Seat selection happens in a modal popup via RegisterCTA */}
             </div>
 
-            <div className="lg:col-span-1">
-              <EventSidebarWrapper
-                eventId={event.eventId}
-                disabled={event.status === 'COMPLETED' || fillPercentage >= 100}
-                status={event.status}
-                registered={event.registeredCount}
-                capacity={event.capacity}
-                percentage={fillPercentage}
-                venue={event.venue}
-                hallLayout={event.hallLayout ?? null}
-              />
+            {/* Right Column (Register & Event Details) */}
+            <div className="lg:col-span-1 space-y-8" id="register-section">
+              <div className="relative z-20">
+                <div className="bg-[#182645] p-1 rounded-[2.2rem] shadow-xl">
+                  <EventSidebarWrapper
+                    eventId={event.eventId}
+                    disabled={event.status === 'COMPLETED' || fillPercentage >= 100}
+                    status={event.status}
+                    registered={event.registeredCount}
+                    capacity={event.capacity}
+                    percentage={fillPercentage}
+                    venue={event.venue}
+                    hallLayout={event.hallLayout ?? null}
+                  />
+                </div>
+              </div>
             </div>
 
           </div>
+
+          {/* Speakers Section (Full Width layout) */}
+          {Array.isArray(event.speakers) && event.speakers.length > 0 && event.status !== 'COMPLETED' && (
+            <div className="mt-16 md:mt-24 pt-16 md:pt-24 border-t border-[#0E1B3D]/10 w-full">
+              <SpeakerCarousel speakers={event.speakers as Speaker[]} />
+            </div>
+          )}
         </div>
-      </Section>
+      </section>
     </div>
   );
 }

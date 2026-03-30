@@ -174,9 +174,7 @@ export function SpeakerCarousel() {
                     <div className="flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-foreground/60" /> {speaker.date}</div>
                     <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-foreground/60" /> {speaker.duration}</div>
                   </div>
-                  <button className="w-full bg-secondary text-white py-3 rounded-xl font-bold text-sm hover:bg-primary transition-colors group/btn">
-                    Explore Talk <span className="ml-1 transition-transform inline-block group-hover/btn:translate-x-1">→</span>
-                  </button>
+
                 </div>
               </div>
             </div>

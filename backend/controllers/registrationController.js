@@ -1,5 +1,6 @@
 const Registration = require('../models/Registration');
 const Event = require('../models/Event');
+const Feedback = require('../models/Feedback');
 const { generateHash, generateQRCode } = require('../utils/qrHelper');
 const { sendRegistrationEmail } = require('../utils/mailer');
 
@@ -124,7 +125,18 @@ const getMyRegistrations = async (req, res) => {
       .populate('event', 'name collegeName city venue dateTime status eventId')
       .sort({ createdAt: -1 });
 
-    res.status(200).json(registrations);
+    const submittedFeedback = await Feedback.find({ studentId: req.user._id })
+      .select('eventId')
+      .lean();
+
+    const submittedFeedbackSet = new Set(submittedFeedback.map(item => item.eventId));
+
+    res.status(200).json(
+      registrations.map(registration => ({
+        ...registration.toObject(),
+        hasSubmittedFeedback: submittedFeedbackSet.has(registration.event?.eventId),
+      }))
+    );
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

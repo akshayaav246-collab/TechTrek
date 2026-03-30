@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/ui/Section";
@@ -6,7 +5,39 @@ import { Input } from "@/components/ui/Input";
 import IndustryAwareness from "@/components/sections/IndustryAwareness";
 import Link from 'next/link';
 
-export default function Home() {
+async function getFirstUpcomingEvent() {
+  try {
+    const res = await fetch('http://localhost:5000/api/events', { next: { revalidate: 60 } });
+    if (!res.ok) return null;
+    const events = await res.json();
+    const upcoming = events
+      .filter((e: { status: string }) => e.status === 'UPCOMING')
+      .sort((a: { dateTime: string }, b: { dateTime: string }) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+    return upcoming[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+async function getFeaturedFeedback() {
+  try {
+    const res = await fetch('http://localhost:5000/api/events/featured/feedback', { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+export default async function Home() {
+  const firstEvent = await getFirstUpcomingEvent();
+  const featuredFeedback = await getFeaturedFeedback();
+  
+  const highlightHref = firstEvent ? `/events/${firstEvent.eventId}` : '/events';
+  const highlightName = firstEvent ? firstEvent.name : 'TechTrek Events';
+  const highlightDate = firstEvent
+    ? new Date(firstEvent.dateTime).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
   return (
     <>
       {/* Hero Section */}
@@ -49,14 +80,23 @@ export default function Home() {
             
             {/* Right Content */}
             <div className="flex flex-col items-center justify-center lg:items-end w-full h-full">
-               <div className="bg-secondary/40 backdrop-blur-md border border-white/10 p-8 rounded-3xl max-w-md w-full shadow-2xl">
+              <Link href={highlightHref} className="block max-w-md w-full group">
+                <div className="bg-secondary/40 backdrop-blur-md border border-white/10 p-8 rounded-3xl shadow-2xl hover:border-primary/40 hover:bg-secondary/60 transition-all duration-300 hover:shadow-[0_0_40px_rgba(232,99,26,0.15)]">
                   <div className="w-full h-40 md:h-48 bg-gradient-to-tr from-primary/40 to-accent/40 rounded-2xl mb-6 relative overflow-hidden flex items-center justify-center border border-white/10 shadow-inner">
                     <span className="text-white/90 font-bold tracking-widest text-sm md:text-base uppercase">Event Highlights</span>
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#e8631a]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <span className="absolute bottom-3 right-3 text-white/50 group-hover:text-white/90 transition-colors text-xs font-bold tracking-widest flex items-center gap-1">
+                      View Details
+                      <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </span>
                   </div>
                   <p className="text-white/95 text-base md:text-lg font-medium text-center leading-relaxed">
-                    Next flagship: <br/><span className="text-primary font-bold text-xl md:text-2xl mt-1 block">TechTrek @ KSRCE</span> <span className="block mt-1">Mar 12, 2026</span>
+                    Next flagship: <br/>
+                    <span className="text-primary font-bold text-xl md:text-2xl mt-1 block group-hover:text-[#ff9d4d] transition-colors">{highlightName}</span>
+                    {highlightDate && <span className="block mt-1 text-white/70 text-sm">{highlightDate}</span>}
                   </p>
-               </div>
+                </div>
+              </Link>
             </div>
           </div>
         </div>
@@ -85,17 +125,21 @@ export default function Home() {
           style={{ 
             '--width': '400px', 
             '--height': '280px', 
-            '--quantity': 5 
+            '--quantity': featuredFeedback.length > 0 ? featuredFeedback.length : 5 
           } as React.CSSProperties}
         >
           <div className="list">
-            {[
+            {(featuredFeedback.length > 0 ? featuredFeedback.map((f: any) => ({
+              name: f.studentName,
+              uni: f.college,
+              quote: f.comment
+            })) : [
               { name: "Rahul S.", uni: "IIT Delhi", quote: "TechTrek totally changed my perspective on the tech industry. I landed my first internship because of the networks I built here!" },
               { name: "Priya M.", uni: "VIT Vellore", quote: "The hands-on workshops on Cloud Native architectures gave me the exact skills I needed to stand out in my interviews." },
               { name: "Arjun K.", uni: "NIT Trichy", quote: "Meeting mentors from top enterprises was invaluable. The guidance I received helped me shape my career path in AI." },
               { name: "Neha R.", uni: "KSRCE", quote: "An electrifying experience! The energy, the knowledge sharing, and the community are unmatched. A must-attend for tech enthusiasts." },
               { name: "Vikram D.", uni: "BITS Pilani", quote: "I came for the cybersecurity talks and stayed for the incredible networking opportunities. Truly a flagship event." }
-            ].map((item, index) => (
+            ]).map((item: { name: string, uni: string, quote: string }, index: number) => (
               <div 
                 key={index} 
                 className="item p-4" 
@@ -111,7 +155,7 @@ export default function Home() {
                       <span className="text-sm text-primary font-medium">{item.uni}</span>
                     </div>
                   </div>
-                  <p className="italic text-white/80 leading-snug text-base font-light">"{item.quote}"</p>
+                  <p className="italic text-white/80 leading-snug text-base font-light overflow-hidden text-ellipsis line-clamp-4">"{item.quote}"</p>
                 </Card>
               </div>
             ))}

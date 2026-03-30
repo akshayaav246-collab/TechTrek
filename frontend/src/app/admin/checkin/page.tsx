@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { GridIcon, PlusIcon, QrIcon, ListIcon, CheckCircleIcon, AlertIcon, UsersIcon, BuildingIcon, ZapIcon } from '@/components/Icons';
+import AdminLayout from '@/components/admin/AdminLayout';
+import { CheckCircleIcon, AlertIcon, UsersIcon, BuildingIcon, ZapIcon } from '@/components/Icons';
 
 type Result = { message: string; studentName?: string; studentEmail?: string; college?: string; eventName?: string; alreadyCheckedIn?: boolean; isError?: boolean };
 
@@ -60,30 +60,8 @@ export default function AdminCheckInPage() {
   const resultIconCls = !result ? '' : result.alreadyCheckedIn ? 'text-amber-500' : result.isError ? 'text-red-500' : 'text-emerald-500';
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] flex font-body">
-      {/* Sidebar */}
-      <aside className="w-60 bg-[#0E1B3D] text-white flex flex-col py-8 px-5 shrink-0">
-        <div className="mb-10">
-          <p className="text-[#e8631a] text-[10px] font-bold uppercase tracking-widest">TechTrek</p>
-          <p className="text-white font-heading font-extrabold text-lg mt-1">GKT Command<br/>Center</p>
-        </div>
-        <nav className="flex flex-col gap-1 flex-1">
-          {[
-            { href: '/admin', label: 'Dashboard', Icon: GridIcon },
-            { href: '/admin/create-event', label: 'Create Event', Icon: PlusIcon },
-            { href: '/admin/checkin', label: 'QR Check-In', Icon: QrIcon, active: true },
-            { href: '/admin/events', label: 'All Events', Icon: ListIcon },
-          ].map(item => (
-            <Link key={item.href} href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${item.active ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white'}`}>
-              <item.Icon className="w-4 h-4" />{item.label}
-            </Link>
-          ))}
-        </nav>
-      </aside>
-
-      {/* Main */}
-      <main className="flex-1 flex flex-col items-center justify-center px-8 py-10">
+    <AdminLayout title="QR Check-In">
+      <div className="min-h-full flex flex-col items-center justify-center py-2 sm:py-6">
         <div className="w-full max-w-md">
           <div className="mb-6 text-center">
             <span className="inline-block bg-[#e8631a]/15 text-[#e8631a] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">Scan Mode</span>
@@ -136,7 +114,7 @@ export default function AdminCheckInPage() {
             </div>
           </details>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
