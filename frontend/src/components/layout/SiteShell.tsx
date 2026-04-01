@@ -14,6 +14,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const isStaffRoute = NO_SHELL_PREFIXES.some(p => pathname.startsWith(p));
+  const hideFooter = pathname === '/profile';
 
   // If a student tries accessing /admin or /superadmin redirect them away
   useEffect(() => {
@@ -78,7 +79,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       <main className="flex-grow pt-20">
         {children}
       </main>
-      <Footer />
+      {!hideFooter && <Footer />}
     </>
   );
 }

@@ -40,7 +40,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
   return (
     <div className="bg-[#F9F8F6] min-h-screen font-body w-full">
       {/* Header Section */}
-      <section className="bg-[#0E1B3D] w-full text-white pt-10 md:pt-14 pb-4 relative h-[85vh] min-h-[600px] overflow-hidden flex flex-col">
+      <section className="bg-[#0E1B3D] w-full text-white pt-24 md:pt-14 pb-12 relative min-h-[85vh] h-auto overflow-hidden flex flex-col">
         {/* Subtle grid background */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E\")" }}></div>
         <div className="absolute top-0 right-0 w-[20rem] h-[20rem] md:w-[40rem] md:h-[40rem] bg-[#e8631a]/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
@@ -164,9 +164,10 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
             {/* Right Column (Register & Event Details) */}
             <div className="lg:col-span-1 space-y-8" id="register-section">
               <div className="relative z-20">
-                <div className="bg-[#182645] p-1 rounded-[2.2rem] shadow-xl">
+                <div className="bg-[#182645] p-1 rounded-[2.2rem] shadow-xl max-w-[340px] sm:max-w-none mx-auto lg:mx-0 w-full">
                   <EventSidebarWrapper
                     eventId={event.eventId}
+                    eventName={event.name}
                     disabled={event.status === 'COMPLETED' || fillPercentage >= 100}
                     status={event.status}
                     registered={event.registeredCount}
@@ -174,6 +175,8 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                     percentage={fillPercentage}
                     venue={event.venue}
                     hallLayout={event.hallLayout ?? null}
+                    eventAmount={event.amount || 500}
+                    days={isMultiDay ? event.days : undefined}
                   />
                 </div>
               </div>

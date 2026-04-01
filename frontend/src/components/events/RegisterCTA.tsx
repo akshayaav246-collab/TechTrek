@@ -10,6 +10,7 @@ import type { HallLayoutData, SeatStatus } from '@/components/VenueMap';
 import { LocationIcon, CheckCircleIcon, HourglassIcon, AlertIcon, DownloadIcon, SeatIcon, XIcon, CreditCardIcon, ClockIcon } from '@/components/Icons';
 
 const VenueMap = dynamic(() => import('@/components/VenueMap'), { ssr: false });
+import { DaySelectionModal } from '@/components/events/DaySelectionModal';
 
 type RegistrationStatus = 'IDLE' | 'REGISTERED' | 'WAITLISTED' | 'ERROR';
 
@@ -31,11 +32,14 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
 }
 
 export function RegisterCTA({
-  eventId, disabled, status, registered, capacity, percentage, venue, hallLayout,
+  eventId, disabled, status, registered, capacity, percentage, venue, hallLayout, eventAmount, days, eventName,
 }: {
   eventId: string; disabled: boolean; status: string;
   registered: number; capacity: number; percentage: number; venue: string;
   hallLayout?: HallLayoutData | null;
+  eventAmount?: number;
+  eventName?: string;
+  days?: { day: number; label?: string; date?: string; agenda: { time: string; title: string; duration: string; speaker?: string }[] }[];
 }) {
   const { user, token } = useAuth();
   const router = useRouter();
@@ -50,6 +54,11 @@ export function RegisterCTA({
   const [mySeat, setMySeat] = useState<SeatStatus | null>(null);
   const [seatLoading, setSeatLoading] = useState(false);
   const [seatMsg, setSeatMsg] = useState('');
+
+  // Multi-day state
+  const isMultiDay = Array.isArray(days) && days.length > 0;
+  const [showDayModal, setShowDayModal] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   useEffect(() => {
     if (user && token) {
@@ -143,14 +152,20 @@ export function RegisterCTA({
     finally { setSeatLoading(false); }
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async (chosenDays?: number[]) => {
     if (!user || !token) { router.push(`/login?redirect=/events/${eventId}`); return; }
     setLoading(true); setRegStatus('IDLE'); setErrorMsg('');
+    setShowDayModal(false);
     try {
+      const body: Record<string, unknown> = { eventId };
+      if (isMultiDay && chosenDays && chosenDays.length > 0) {
+        body.selectedDays = chosenDays;
+        setSelectedDays(chosenDays);
+      }
       const res = await fetch('http://localhost:5000/api/registrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ eventId }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -169,6 +184,16 @@ export function RegisterCTA({
     finally { setLoading(false); }
   };
 
+  // Button click: open day modal for multi-day, else register directly
+  const onRegisterClick = () => {
+    if (!user || !token) { router.push(`/login?redirect=/events/${eventId}`); return; }
+    if (isMultiDay) {
+      setShowDayModal(true);
+    } else {
+      handleRegister();
+    }
+  };
+
   const downloadQR = () => {
     if (!qrCode) return;
     const a = document.createElement('a'); a.href = qrCode; a.download = `techtrek-ticket-${eventId}.png`; a.click();
@@ -181,18 +206,18 @@ export function RegisterCTA({
 
   return (
     <>
-      <div className="sticky top-28 bg-[#0E1B3D] border border-white/5 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden backdrop-blur-xl">
+      <div className="sticky top-28 bg-[#0E1B3D] border border-white/5 p-6 md:p-8 rounded-3xl md:rounded-[2rem] shadow-2xl relative overflow-hidden backdrop-blur-xl max-w-[340px] sm:max-w-none mx-auto w-full">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#e8631a]/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-        <h3 className="font-heading font-extrabold text-3xl text-white mb-8 tracking-tight relative z-10">Ready to Join?</h3>
+        <h3 className="font-heading font-extrabold text-2xl md:text-3xl text-white mb-5 md:mb-8 tracking-tight relative z-10">Ready to Join?</h3>
 
         {/* Seat Stats */}
-        <div className="bg-white/5 p-6 rounded-[1.5rem] mb-6 border border-white/5 relative z-10 shadow-inner">
-          <div className="flex items-end gap-3 mb-4">
-            <span className="text-6xl font-heading font-black text-white leading-none tracking-tighter">{registered}</span>
-            <span className="text-sm font-bold text-white/40 pb-1.5 uppercase tracking-widest leading-none">/ {capacity} Seats</span>
+        <div className="bg-white/5 p-4 md:p-6 rounded-2xl md:rounded-[1.5rem] mb-5 md:mb-6 border border-white/5 relative z-10 shadow-inner">
+          <div className="flex items-end gap-3 mb-3 md:mb-4">
+            <span className="text-4xl md:text-6xl font-heading font-black text-white leading-none tracking-tighter">{registered}</span>
+            <span className="text-xs md:text-sm font-bold text-white/40 pb-1 md:pb-1.5 uppercase tracking-widest leading-none">/ {capacity} Seats</span>
           </div>
           <div className="w-full h-2.5 bg-[#0E1B3D] rounded-full overflow-hidden mb-3 border border-white/5">
-            <div className={`h-full rounded-full transition-all duration-1000 ${percentage >= 100 ? 'bg-red-500' : 'bg-gradient-to-r from-[#e8631a] to-orange-400'}`} style={{ width: `${percentage}%` }}/>
+            <div className={`h-full rounded-full transition-all duration-1000 ${percentage >= 100 ? 'bg-gradient-to-r from-[#e8631a] to-orange-400' : 'bg-gradient-to-r from-[#e8631a] to-orange-400'}`} style={{ width: `${percentage}%` }}/>
           </div>
           <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider">
             <p className="text-[#e8631a] drop-shadow-sm">{percentage}% Filled</p>
@@ -250,9 +275,9 @@ export function RegisterCTA({
           </div>
         ) : (
           <button
-            className={`w-full py-4 md:py-5 rounded-2xl text-base md:text-lg font-bold shadow-[0_0_20px_rgba(232,99,26,0.3)] transition-all relative z-10 flex items-center justify-center
+            className={`w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl text-sm md:text-lg font-bold shadow-[0_0_20px_rgba(232,99,26,0.3)] transition-all relative z-10 flex items-center justify-center
               ${disabled ? 'opacity-50 cursor-not-allowed bg-white/10 text-white/40 border border-white/10' : 'bg-gradient-to-r from-[#e8631a] to-orange-500 text-white hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(232,99,26,0.5)]'}`}
-            onClick={handleRegister} disabled={disabled || loading}>
+            onClick={onRegisterClick} disabled={disabled || loading}>
             {loading ? (
               <span className="flex items-center justify-center gap-3">
                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
@@ -261,17 +286,33 @@ export function RegisterCTA({
                 </svg>
                 Processing…
               </span>
-            ) : disabled ? 'Sold Out' : "Register Now — It's Free"}
+            ) : disabled ? 'Sold Out' : isMultiDay
+              ? `Register Now — ₹${eventAmount || 500}/day`
+              : `Register Now — ₹${eventAmount || 500}`}
           </button>
         )}
 
         {!user && !isCompleted && status !== 'COMPLETED' && (
-          <p className="text-center text-xs text-white/40 mt-5 font-medium relative z-10">You'll be asked to sign in first</p>
+          <p className="text-center text-[10px] md:text-xs text-white/40 mt-4 font-medium relative z-10">You'll be asked to sign in first</p>
         )}
       </div>
 
+      {/* ── Day Selection Modal (multi-day events) ─────────── */}
+      {showDayModal && isMultiDay && days && (
+        <DaySelectionModal
+          days={days}
+          eventName={eventName || eventId}
+          perDayAmount={eventAmount || 500}
+          discipline={user?.discipline}
+          onClose={() => setShowDayModal(false)}
+          onConfirm={(chosenDays) => handleRegister(chosenDays)}
+          loading={loading}
+        />
+      )}
+
       {/* ── Seat Selection Modal ─────────────────────────── */}
       {showSeatModal && hallLayout && (
+
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
           {/* Reduced max-w from 4xl → 3xl; max-h tighter to avoid top-cut */}
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">

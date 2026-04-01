@@ -197,7 +197,7 @@ export default function SeatSelectionClient({ eventId, layout }: Props) {
 
       {!user && (
         <div className="text-center py-4 text-sm text-gray-500">
-          <a href="/login" className="text-[#e8631a] font-bold hover:underline">Log in</a> to select and hold a seat.
+          <a href={`/login?redirect=/events/${eventId}`} className="text-[#e8631a] font-bold hover:underline">Log in</a> to select and hold a seat.
         </div>
       )}
     </div>

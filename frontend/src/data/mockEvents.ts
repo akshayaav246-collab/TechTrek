@@ -5,6 +5,10 @@ export interface Speaker {
   company: string;
   bio: string;
   image?: string;
+  headline?: string;
+  tags?: string[];
+  date?: string;
+  duration?: string;
 }
 
 export interface AgendaItem {
@@ -46,9 +50,10 @@ export const mockEvents: TechEvent[] = [
     description: "Join us at KSRCE for an immersive 1-day summit focusing on the future of AI and Cloud technologies in India. Hear from top industry leaders, participate in hands-on workshops, and network with peers.",
     topics: ["Artificial Intelligence", "Cloud Native", "Career Guidance"],
     speakers: [
-      { id: "s1", name: "Rahul Sharma", role: "VP Strategy", company: "Infosys", bio: "Leading AI initiatives and enterprise transformation across global markets." },
-      { id: "s2", name: "Priya Krishnan", role: "Founder", company: "GreenLeaf Ventures", bio: "Investor in deep-tech and climate solutions empowering next-gen founders." },
-      { id: "s3", name: "Arjun Mehta", role: "Head of FinTech", company: "HDFC Bank", bio: "Pioneering the architecture behind India's digital payment revolution." }
+      { id: "s1", name: "Rahul Sharma", role: "VP Strategy", company: "Infosys", bio: "Leading AI initiatives and enterprise transformation across global markets.", headline: "India's $1T Tech Dream", tags: ["#AI", "#TECHINDUSTRY"], date: "Mar 12, 10:00 AM", duration: "45 mins" },
+      { id: "s2", name: "Priya Krishnan", role: "Founder", company: "GreenLeaf Ventures", bio: "Investor in deep-tech and climate solutions empowering next-gen founders.", headline: "Building Green in Bharat", tags: ["#CLIMATE", "#STARTUPS"], date: "Mar 12, 11:30 AM", duration: "30 mins" },
+      { id: "s3", name: "Arjun Mehta", role: "Head of FinTech", company: "HDFC Bank", bio: "Pioneering the architecture behind India's digital payment revolution.", headline: "The Future of FinTech", tags: ["#FINTECH", "#UPI"], date: "Mar 12, 02:00 PM", duration: "60 mins" },
+      { id: "s4", name: "Dr. Anita Desai", role: "Chief Scientist", company: "QuantumCorp", bio: "Pioneer in quantum algorithms and cryptographic security.", headline: "Quantum Supremacy in India", tags: ["#QUANTUM", "#DEEPTECH"], date: "Mar 12, 03:30 PM", duration: "45 mins" }
     ],
     agenda: [
       { time: "09:30 AM", title: "Registrations & Welcome Networking", duration: "30 mins" },

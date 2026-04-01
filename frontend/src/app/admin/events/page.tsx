@@ -185,7 +185,7 @@ export default function AdminEventsPage() {
           ) : filtered.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-gray-400 font-medium mb-4">No events found.</p>
-              <Link href="/admin/create-event" className="bg-[#e8631a] text-white px-5 py-2.5 rounded-xl font-bold text-sm inline-block">Create Event</Link>
+              <Link href="/admin/create-event" className="bg-[#C84B11] text-white px-5 py-2.5 rounded-xl font-bold text-sm inline-block">Create Event</Link>
             </div>
           ) : (
             <>
@@ -218,12 +218,12 @@ export default function AdminEventsPage() {
                   return (
                     <div key={evt.eventId}
                       onClick={() => router.push(`/admin/events/${evt.eventId}`)}
-                      className="grid gap-4 px-6 py-5 items-center hover:bg-[#e8631a]/10 transition-colors cursor-pointer group"
+                      className="grid gap-4 px-6 py-5 items-center hover:bg-[#C84B11]/10 transition-colors cursor-pointer group"
                       style={{gridTemplateColumns: 'minmax(220px,2fr) minmax(220px,2fr) minmax(140px,1fr) minmax(140px,1fr) minmax(110px,0.9fr) minmax(90px,0.8fr) minmax(90px,0.8fr) minmax(90px,0.8fr) minmax(110px,0.9fr) minmax(150px,1.1fr)'}}>
 
                       {/* Event name only */}
                       <div className="min-w-0">
-                        <p className="font-bold text-[#0E1B3D] group-hover:text-[#e8631a] text-base leading-tight transition-colors truncate">{evt.name}</p>
+                        <p className="font-bold text-[#0E1B3D] group-hover:text-[#C84B11] text-base leading-tight transition-colors truncate">{evt.name}</p>
                       </div>
 
                       {/* College */}
@@ -243,9 +243,9 @@ export default function AdminEventsPage() {
 
                       {/* Seats */}
                       <div className="min-w-0">
-                        <p className="font-extrabold text-[#e8631a] text-base truncate">{evt.registeredCount}<span className="text-gray-300 font-normal text-sm">/{evt.capacity}</span></p>
+                        <p className="font-extrabold text-[#C84B11] text-base truncate">{evt.registeredCount}<span className="text-gray-300 font-normal text-sm">/{evt.capacity}</span></p>
                         <div className="h-1 bg-gray-100 rounded-full overflow-hidden mt-1 max-w-[110px]">
-                          <div className={`h-full rounded-full ${pct >= 100 ? 'bg-red-400' : 'bg-[#e8631a]'}`} style={{ width: `${pct}%` }}/>
+                          <div className={`h-full rounded-full ${pct >= 100 ? 'bg-[#C84B11]' : 'bg-[#C84B11]'}`} style={{ width: `${pct}%` }}/>
                         </div>
                       </div>
 
@@ -366,11 +366,11 @@ export default function AdminEventsPage() {
                       </div>
                       
                       <div className="grid grid-cols-3 gap-3 mb-4 mt-3">
-                        <div className="bg-[#e8631a]/5 rounded-lg p-3 text-center border border-[#e8631a]/20">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#e8631a]/60 mb-0.5">Seats</p>
-                          <p className="font-extrabold text-[#e8631a] text-lg leading-none">{evt.registeredCount}<span className="text-[#e8631a]/40 font-normal text-xs">/{evt.capacity}</span></p>
-                          <div className="h-1 bg-[#e8631a]/20 rounded-full overflow-hidden mt-1.5 w-full max-w-[80px] mx-auto">
-                            <div className={`h-full rounded-full ${pct >= 100 ? 'bg-red-400' : 'bg-[#e8631a]'}`} style={{ width: `${pct}%` }}/>
+                        <div className="bg-[#C84B11]/5 rounded-lg p-3 text-center border border-[#C84B11]/20">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#C84B11]/60 mb-0.5">Seats</p>
+                          <p className="font-extrabold text-[#C84B11] text-lg leading-none">{evt.registeredCount}<span className="text-[#C84B11]/40 font-normal text-xs">/{evt.capacity}</span></p>
+                          <div className="h-1 bg-[#C84B11]/20 rounded-full overflow-hidden mt-1.5 w-full max-w-[80px] mx-auto">
+                            <div className={`h-full rounded-full ${pct >= 100 ? 'bg-[#C84B11]' : 'bg-[#C84B11]'}`} style={{ width: `${pct}%` }}/>
                           </div>
                         </div>
                         <div className="bg-amber-50/50 rounded-lg p-3 text-center border border-amber-100/50">
@@ -497,3 +497,7 @@ export default function AdminEventsPage() {
     </AdminLayout>
   );
 }
+
+
+
+

@@ -599,8 +599,8 @@ function AuthForms() {
         <BrandPanel />
 
         {/* Right: Form panel */}
-        <div className="lg:w-1/2 flex-1 flex items-center justify-center px-4 sm:px-6 pt-28 pb-16 overflow-y-auto relative w-full bg-[#0E1B3D]">
-          <div className={`w-full bg-[#FAF8F4] rounded-2xl shadow-2xl border border-white/10 p-5 sm:p-8 lg:p-12 relative z-10 transition-all duration-300 ${tab === 'signup' ? 'max-w-2xl' : 'max-w-md'}`}>
+        <div className="lg:w-1/2 flex-1 flex flex-col px-4 sm:px-6 pt-24 pb-16 overflow-y-auto relative w-full bg-[#0E1B3D]">
+          <div className={`w-full m-auto bg-[#FAF8F4] rounded-2xl shadow-2xl border border-white/10 p-5 sm:p-8 lg:p-12 relative z-10 transition-all duration-300 ${tab === 'signup' ? 'max-w-2xl' : 'max-w-md'}`}>
 
             {/* Tab toggle */}
             <div className="flex items-center bg-[#EAE4D9] border border-[#DCD6C8] rounded-xl p-1 mb-6 shadow-inner">
@@ -740,8 +740,30 @@ function AuthForms() {
                   
                   {/* Discipline */}
                   <div className="flex flex-col gap-1.5">
-                    <Field label="Discipline" type="text" name="discipline" value={signupData.discipline}
-                      onChange={onSignupChange} placeholder="CSE / IT / ECE" />
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">Discipline</label>
+                    <select name="discipline" value={signupData.discipline} onChange={onSignupChange} required
+                      className={`w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#e8631a] transition-colors text-[13px] ${!signupData.discipline ? 'text-[#0E1B3D]/40' : 'text-[#0E1B3D]'}`}>
+                      <option value="" disabled>Select Discipline</option>
+                      <optgroup label="Engineering Students (Core Technical)">
+                        <option value="CSE">Computer Science & Engineering (CSE)</option>
+                        <option value="IT">Information Technology (IT)</option>
+                        <option value="ECE">Electronics & Communication (ECE)</option>
+                        <option value="EEE">Electrical & Electronics (EEE)</option>
+                        <option value="Mechanical">Mechanical Engineering</option>
+                        <option value="Civil">Civil Engineering</option>
+                        <option value="AI/ML">Artificial Intelligence & Machine Learning (AI/ML)</option>
+                        <option value="Data Science">Data Science</option>
+                      </optgroup>
+                      <optgroup label="Non-Engineering Students (Business & Arts)">
+                        <option value="Commerce">Commerce</option>
+                        <option value="BBA">Bachelor of Business Administration (BBA)</option>
+                        <option value="BCA">Bachelor of Computer Applications (BCA)</option>
+                        <option value="Science">Science</option>
+                        <option value="Arts">Arts</option>
+                        <option value="Law">Law</option>
+                        <option value="Design">Design</option>
+                      </optgroup>
+                    </select>
                     <FieldErr name="discipline" />
                   </div>
                 </div>

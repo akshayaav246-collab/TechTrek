@@ -44,7 +44,7 @@ export function EventCard({ event }: { event: TechEvent }) {
           {/* Progress Bar */}
           <div className="w-full h-2 bg-black/5 rounded-full overflow-hidden mb-6">
             <div 
-              className={`h-full rounded-full transition-all duration-1000 ease-out ${percentage >= 100 ? 'bg-[#b91d1d]' : 'bg-primary'}`} 
+              className={`h-full rounded-full transition-all duration-1000 ease-out ${percentage >= 100 ? 'bg-primary' : 'bg-primary'}`} 
               style={{ width: `${percentage}%` }}
             ></div>
           </div>

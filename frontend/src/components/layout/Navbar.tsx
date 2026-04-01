@@ -52,7 +52,7 @@ export function Navbar() {
                 <button onClick={handleLogout} className="font-medium text-foreground/70 hover:text-[#b91d1d] hover:bg-[#b91d1d]/10 px-3 py-1.5 rounded-lg transition-colors">Logout</button>
               </div>
             ) : (
-              <Link href="/login" className={getNavClass('/login') + " ml-2"}>SignUp/Login</Link>
+              <Link href={`/login?redirect=${pathname}`} className={getNavClass('/login') + " ml-2"}>SignUp/Login</Link>
             )}
           </nav>
         </div>
@@ -88,7 +88,7 @@ export function Navbar() {
                 <button onClick={handleLogout} className="font-medium text-left text-foreground/70 hover:text-[#b91d1d] hover:bg-[#b91d1d]/10 px-4 py-3 rounded-xl transition-colors">Logout</button>
               </div>
             ) : (
-              <Link href="/login" onClick={() => setIsMenuOpen(false)} className={getMobileNavClass('/login') + " mt-2"}>SignUp / Login</Link>
+              <Link href={`/login?redirect=${pathname}`} onClick={() => setIsMenuOpen(false)} className={getMobileNavClass('/login') + " mt-2"}>SignUp / Login</Link>
             )}
           </nav>
         </div>

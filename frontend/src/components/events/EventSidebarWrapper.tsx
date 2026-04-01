@@ -12,6 +12,9 @@ type Props = {
   percentage: number;
   venue: string;
   hallLayout?: Record<string, unknown> | null;
+  eventAmount?: number;
+  eventName?: string;
+  days?: { day: number; label?: string; date?: string; agenda: { time: string; title: string; duration: string; speaker?: string }[] }[];
 };
 
 export function EventSidebarWrapper(props: Props) {

@@ -30,8 +30,8 @@ const defaultForm = {
   days: [] as DayAgendaForm[],
 };
 
-const formFieldClassName = "w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors";
-const compactFormFieldClassName = "bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors";
+const formFieldClassName = "w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors";
+const compactFormFieldClassName = "bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors";
 const fieldLabelClassName = "block text-[11px] font-bold uppercase tracking-[0.18em] text-[#6F665C] mb-2";
 
 // Defined OUTSIDE the page component to prevent remount on every keystroke
@@ -264,7 +264,7 @@ export default function CreateEventPage() {
     finally { setSubmitting(false); }
   };
 
-  const layoutPreviewReady = layout.hall_name && layout.total_rows > 0 && layout.seats_per_row > 0;
+  const layoutPreviewReady = layout.hall_name && Number(layout.total_rows) > 0 && Number(layout.seats_per_row) > 0;
   const goToStep = (targetStep: Step) => setStep(targetStep);
   const handleNext = async () => {
     setError('');
@@ -292,12 +292,12 @@ export default function CreateEventPage() {
                   <button
                     type="button"
                     onClick={() => goToStep(stepNumber)}
-                    className={`flex items-center gap-3 transition-colors ${isCurrent ? 'text-[#E8631A]' : isComplete ? 'text-emerald-700' : 'text-[#8D99AE]'}`}
+                    className={`flex items-center gap-3 transition-colors ${isCurrent ? 'text-[#C84B11]' : isComplete ? 'text-emerald-700' : 'text-[#8D99AE]'}`}
                   >
                     <span
                       className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold shadow-sm transition-all ${
                         isCurrent
-                          ? 'border-[#E8631A] bg-[#E8631A] text-white'
+                          ? 'border-[#C84B11] bg-[#C84B11] text-white'
                           : isComplete
                             ? 'border-emerald-600 bg-emerald-600 text-white'
                             : 'border-[#E2D8CC] bg-[#FAF7F2] text-[#8D99AE]'
@@ -334,7 +334,7 @@ export default function CreateEventPage() {
                 <div>
                   <label className={fieldLabelClassName}>Description</label>
                   <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={4} placeholder="Describe the event…"
-                    className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] resize-none transition-colors"/>
+                    className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] resize-none transition-colors"/>
                 </div>
                 <FormInput label="Topics (comma separated)" value={form.topics} onChange={v => set('topics', v)} placeholder="AI, ML, IoT, Robotics" />
               </div>
@@ -371,7 +371,7 @@ export default function CreateEventPage() {
                       <div className="sm:col-span-2">
                         <label className={fieldLabelClassName}>Short Bio</label>
                         <textarea value={sp.bio} onChange={e => setSpeaker(i, 'bio', e.target.value)} rows={3} placeholder="Short Bio"
-                          className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] resize-none transition-colors"/>
+                          className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] resize-none transition-colors"/>
                       </div>
                     </div>
                   </div>
@@ -399,7 +399,7 @@ export default function CreateEventPage() {
                     <div className="relative">
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</span>
                       <input type="number" min={0} value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0 = Free"
-                        className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors" />
+                        className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors" />
                     </div>
                   </div>
                 </div>
@@ -440,7 +440,7 @@ export default function CreateEventPage() {
                             <span className="bg-[#0E1B3D] text-white text-xs font-bold px-3 py-1 rounded-full">Day {d.day}</span>
                             <input value={d.label} onChange={e => setForm(p => { const nd = [...p.days]; nd[dayIdx] = { ...nd[dayIdx], label: e.target.value }; return { ...p, days: nd }; })}
                               placeholder={`Day ${d.day} label`}
-                              className="bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#e8631a] transition-colors" />
+                              className="bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#C84B11] transition-colors" />
                           </div>
                           {form.days.length > 1 && (
                             <button type="button" onClick={() => removeDay(dayIdx)} className="text-red-400 text-xs font-bold">Remove Day</button>
@@ -485,7 +485,7 @@ export default function CreateEventPage() {
                   <div className="bg-[#F2EBE0] border border-[#E2D8CC] rounded-2xl p-4">
                     <label className={fieldLabelClassName}>Select Hall</label>
                     <select value={selectedHallId} onChange={e => autofillHall(e.target.value)}
-                      className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#e8631a]">
+                      className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#C84B11]">
                       <option value="">— Create new layout —</option>
                       {savedHalls.map(h => (
                         <option key={h._id} value={h._id}>{h.hall_name} ({h.total_rows} rows × {h.seats_per_row} seats)</option>
@@ -499,20 +499,20 @@ export default function CreateEventPage() {
                   <div>
                     <label className={fieldLabelClassName}>Hall Name</label>
                     <input value={layout.hall_name} onChange={e => setL('hall_name', e.target.value)} placeholder="Main Auditorium"
-                      className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                      className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors"/>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className={fieldLabelClassName}>Total Rows</label>
                       <input type="number" min={1} max={52} value={layout.total_rows || ''}
                         onChange={e => setL('total_rows', e.target.value === '' ? '' : Math.max(1, Math.min(52, Number(e.target.value))))}
-                        className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                        className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors"/>
                     </div>
                     <div>
                       <label className={fieldLabelClassName}>Seats / Row</label>
                       <input type="number" min={1} value={layout.seats_per_row || ''}
                         onChange={e => setL('seats_per_row', e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
-                        className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                        className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors"/>
                     </div>
                   </div>
                 </div>
@@ -521,13 +521,13 @@ export default function CreateEventPage() {
                   <div>
                     <label className={fieldLabelClassName}>Aisle After Seat (comma separated)</label>
                     <input value={aisleInput} onChange={e => applyAisles(e.target.value)} placeholder="e.g. 10, 20"
-                      className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                      className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors"/>
                     <p className="text-[10px] text-gray-400 mt-1">Inserts an aisle gap after these seat positions</p>
                   </div>
                   <div>
                     <label className={fieldLabelClassName}>VIP / Reserved Rows (comma separated)</label>
                     <input value={reservedInput} onChange={e => applyReserved(e.target.value)} placeholder="e.g. A, B"
-                      className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors"/>
+                      className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors"/>
                     <p className="text-[10px] text-gray-400 mt-1">These rows will be highlighted as VIP</p>
                   </div>
                 </div>
@@ -538,7 +538,7 @@ export default function CreateEventPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {(['front', 'back'] as const).map(pos => (
                         <button key={pos} type="button" onClick={() => setL('stage_position', pos)}
-                          className={`shine-button flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all ${layout.stage_position === pos ? 'bg-gradient-to-br from-[#C84B11] to-[#E8622A] text-white border-[#C84B11] shadow-[0_12px_24px_rgba(200,75,17,0.18)]' : 'bg-[#FAF7F2] border-[#E2D8CC] text-gray-600 hover:border-[#e8631a]'}`}>
+                          className={`shine-button flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all ${layout.stage_position === pos ? 'bg-gradient-to-br from-[#C84B11] to-[#E8622A] text-white border-[#C84B11] shadow-[0_12px_24px_rgba(200,75,17,0.18)]' : 'bg-[#FAF7F2] border-[#E2D8CC] text-gray-600 hover:border-[#C84B11]'}`}>
                           {pos === 'front' ? 'Front Stage' : 'Back Stage'}
                         </button>
                       ))}
@@ -560,7 +560,7 @@ export default function CreateEventPage() {
                 {/* Save hall toggle */}
                 <label className="flex items-center gap-3 cursor-pointer select-none">
                   <div onClick={() => setSaveHall(p => !p)}
-                    className={`w-10 h-5 rounded-full transition-colors relative ${saveHall ? 'bg-[#e8631a]' : 'bg-gray-300'}`}>
+                    className={`w-10 h-5 rounded-full transition-colors relative ${saveHall ? 'bg-[#C84B11]' : 'bg-gray-300'}`}>
                     <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${saveHall ? 'left-5' : 'left-0.5'}`}/>
                   </div>
                   <span className="text-sm text-gray-600 font-medium">Save this hall layout for future events</span>
@@ -584,7 +584,7 @@ export default function CreateEventPage() {
                   <div className="border border-[#E2D8CC] rounded-2xl p-5 bg-[#F2EBE0]">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-bold text-[#0E1B3D] text-base">Basic Info</h3>
-                      <button type="button" onClick={() => setStep(1)} className="text-[#e8631a] text-sm font-bold hover:underline">Edit</button>
+                      <button type="button" onClick={() => setStep(1)} className="text-[#C84B11] text-sm font-bold hover:underline">Edit</button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div><span className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Event Name</span><span className="text-[#0E1B3D] font-medium">{form.name || '—'}</span></div>
@@ -614,7 +614,7 @@ export default function CreateEventPage() {
                   <div className="border border-[#E2D8CC] rounded-2xl p-5 bg-[#F2EBE0]">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-bold text-[#0E1B3D] text-base">Speakers</h3>
-                      <button type="button" onClick={() => setStep(2)} className="text-[#e8631a] text-sm font-bold hover:underline">Edit</button>
+                      <button type="button" onClick={() => setStep(2)} className="text-[#C84B11] text-sm font-bold hover:underline">Edit</button>
                     </div>
                     {filledSpeakers.length > 0 ? (
                       <div className="space-y-3">
@@ -636,7 +636,7 @@ export default function CreateEventPage() {
                   <div className="border border-[#E2D8CC] rounded-2xl p-5 bg-[#F2EBE0]">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-bold text-[#0E1B3D] text-base">Schedule & Agenda</h3>
-                      <button type="button" onClick={() => setStep(3)} className="text-[#e8631a] text-sm font-bold hover:underline">Edit</button>
+                      <button type="button" onClick={() => setStep(3)} className="text-[#C84B11] text-sm font-bold hover:underline">Edit</button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
                       <div><span className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Start Date & Time</span><span className="text-[#0E1B3D] font-medium">{form.dateTime ? new Date(form.dateTime).toLocaleString() : '—'}</span></div>
@@ -701,7 +701,7 @@ export default function CreateEventPage() {
                   <div className="border border-[#E2D8CC] rounded-2xl p-5 bg-[#F2EBE0]">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-bold text-[#0E1B3D] text-base">Hall Layout</h3>
-                      <button type="button" onClick={() => setStep(4)} className="text-[#e8631a] text-sm font-bold hover:underline">Edit</button>
+                      <button type="button" onClick={() => setStep(4)} className="text-[#C84B11] text-sm font-bold hover:underline">Edit</button>
                     </div>
                     {layoutPreviewReady ? (
                       <>
@@ -760,3 +760,7 @@ export default function CreateEventPage() {
     </AdminLayout>
   );
 }
+
+
+
+

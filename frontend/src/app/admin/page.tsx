@@ -115,12 +115,12 @@ const Metric = ({
   <button
     type="button"
     onClick={onClick}
-    className={`bg-[#FFFFFF] rounded-2xl p-6 ${accent} border border-[#E8DDD0] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between h-[160px] relative group overflow-hidden hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left w-full`}
+    className={`bg-[#FFFFFF] rounded-2xl p-6 ${accent} border border-[#E2D8CC] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between h-[160px] relative group overflow-hidden hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left w-full`}
   >
     <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
     <div className="flex justify-between items-center relative z-10 w-full border-b border-[#FAF7F2] pb-4">
       <p className={`text-[13px] font-[DM_Sans] font-bold ${labelColor} tracking-wide uppercase`}>{label}</p>
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FAF7F2] border border-[#E8DDD0] shadow-sm shrink-0">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FAF7F2] border border-[#E2D8CC] shadow-sm shrink-0">
         {icon}
       </div>
     </div>
@@ -314,7 +314,7 @@ export default function AdminPage() {
         {/* ── Row 1: KPI Cards ─────────────────────────────────── */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-[#FFFFFF] rounded-2xl min-h-[140px] animate-pulse border border-[#E8DDD0]" />)}
+            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-[#FFFFFF] rounded-2xl min-h-[140px] animate-pulse border border-[#E2D8CC]" />)}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both">
@@ -322,7 +322,7 @@ export default function AdminPage() {
               label="Total Events" 
               value={summary?.totalEvents || events.length} 
               trendStr={`↑ ${eventsThisMonth} this month`} 
-              trendColor="bg-[#FAF7F2] text-[#C84B11] border border-[#E8DDD0]" 
+              trendColor="bg-[#FAF7F2] text-[#C84B11] border border-[#E2D8CC]" 
               accent="border-t-[3px] border-t-[#C84B11]" 
               labelColor="text-[#C84B11]"
               onClick={() => setActiveKpi('events')}
@@ -332,7 +332,7 @@ export default function AdminPage() {
               label="Active Events" 
               value={summary?.upcoming || 0} 
               trendStr={`↑ ${activeEventsWeek} this week`} 
-              trendColor="bg-[#FAF7F2] text-[#1A4A7A] border border-[#E8DDD0]" 
+              trendColor="bg-[#FAF7F2] text-[#1A4A7A] border border-[#E2D8CC]" 
               accent="border-t-[3px] border-t-[#1A4A7A]" 
               labelColor="text-[#1A4A7A]"
               onClick={() => setActiveKpi('active')}
@@ -342,7 +342,7 @@ export default function AdminPage() {
               label="Total Registrations" 
               value={summary?.totalRegistrations || 0} 
               trendStr={regTrendStr} 
-              trendColor={regTrendColor.includes('emerald') ? "bg-[#FAF7F2] text-[#C84B11] border border-[#E8DDD0]" : "bg-[#FAF7F2] text-[#7A7166] border border-[#E8DDD0]"} 
+              trendColor={regTrendColor.includes('emerald') ? "bg-[#FAF7F2] text-[#C84B11] border border-[#E2D8CC]" : "bg-[#FAF7F2] text-[#7A7166] border border-[#E2D8CC]"} 
               accent="border-t-[3px] border-t-[#C84B11]" 
               labelColor="text-[#C84B11]"
               onClick={() => setActiveKpi('registrations')}
@@ -352,7 +352,7 @@ export default function AdminPage() {
               label="Revenue Generated" 
               value={formatRevenue(summary?.totalRevenue || 0)} 
               trendStr={revTrendStr} 
-              trendColor={revTrendColor.includes('emerald') ? "bg-[#FAF7F2] text-[#1A4A7A] border border-[#E8DDD0]" : "bg-[#FAF7F2] text-[#7A7166] border border-[#E8DDD0]"} 
+              trendColor={revTrendColor.includes('emerald') ? "bg-[#FAF7F2] text-[#1A4A7A] border border-[#E2D8CC]" : "bg-[#FAF7F2] text-[#7A7166] border border-[#E2D8CC]"} 
               accent="border-t-[3px] border-t-[#1A4A7A]" 
               labelColor="text-[#1A4A7A]"
               onClick={() => setActiveKpi('revenue')}
@@ -370,7 +370,7 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
             
             {/* Top Events by Registrations */}
-            <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E8DDD0] p-6 h-[270px] flex flex-col hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
+            <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] p-6 h-[270px] flex flex-col hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
               <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17] mb-6">Top Events by Registrations</h2>
               <div className="flex-1 overflow-y-auto pr-2 space-y-5 font-[DM_Sans]">
                 {topEventsByReg.map((evt, i) => {
@@ -388,7 +388,7 @@ export default function AdminPage() {
             </div>
 
             {/* Revenue Breakdown */}
-            <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E8DDD0] p-6 h-[270px] flex flex-col hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
+            <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] p-6 h-[270px] flex flex-col hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
               <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17] mb-6">Revenue Breakdown</h2>
               <div className="flex-1 overflow-y-auto pr-2 space-y-5 font-[DM_Sans]">
                 {topEventsByRev.map((evt, i) => {
@@ -411,7 +411,7 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-[320px] animate-in fade-in slide-in-from-bottom-8 duration-500 delay-200 fill-mode-both">
           
           {/* Upcoming Events */}
-          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E8DDD0] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
+          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 min-h-[320px] lg:min-h-0">
             <div className="px-6 py-5 border-b border-[#FAF7F2] flex justify-between items-center shrink-0">
               <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Upcoming Events</h2>
               <Link href="/admin/events" className="text-[#C84B11] text-[11px] px-3 py-1.5 bg-[#FAF7F2] rounded-lg font-[DM_Sans] font-bold uppercase tracking-wider hover:brightness-110">View All →</Link>
@@ -427,7 +427,7 @@ export default function AdminPage() {
                       <div key={evt.eventId} className="px-6 py-4 hover:bg-[#FAF7F2]/50 transition-colors group">
                         <div className="flex justify-between items-center mb-2">
                           <p className="font-bold text-[#1C1A17] text-[15px] truncate group-hover:text-[#C84B11] transition-colors flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#1A4A7A]" />{evt.name}</p>
-                          <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full shrink-0 border ${isSoldOut ? 'bg-red-50 text-red-600 border-red-100' : 'bg-[#FAF7F2] text-[#C84B11] border-[#E8DDD0]'}`}>
+                          <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full shrink-0 border ${isSoldOut ? 'bg-red-50 text-red-600 border-red-100' : 'bg-[#FAF7F2] text-[#C84B11] border-[#E2D8CC]'}`}>
                             {isSoldOut ? 'Sold Out' : 'Open'}
                           </span>
                         </div>
@@ -446,7 +446,7 @@ export default function AdminPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E8DDD0] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
+          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 min-h-[320px] lg:min-h-0">
             <div className="px-6 py-5 border-b border-[#FAF7F2] shrink-0">
               <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Recent Activity</h2>
             </div>
@@ -457,7 +457,7 @@ export default function AdminPage() {
                 <div className="divide-y divide-[#FAF7F2]">
                   {activity.map((a, i) => (
                     <div key={i} className="flex items-start gap-4 px-6 py-4 hover:bg-[#FAF7F2]/50 transition-colors">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border ${a.type === 'checkin' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : a.status === 'WAITLISTED' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-[#FAF7F2] text-[#1A4A7A] border-[#E8DDD0]'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border ${a.type === 'checkin' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : a.status === 'WAITLISTED' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-[#FAF7F2] text-[#1A4A7A] border-[#E2D8CC]'}`}>
                         {a.type === 'checkin' ? (
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                         ) : a.status === 'WAITLISTED' ? (
@@ -471,7 +471,7 @@ export default function AdminPage() {
                         <p className="text-[#7A7166] text-xs truncate mt-0.5">{a.type === 'checkin' ? 'Checked in to' : a.status === 'WAITLISTED' ? 'Waitlisted for' : 'Registered for'} <span className="font-bold text-[#1A4A7A]">{a.eventName}</span></p>
                         <p className="text-[#7A7166] text-xs mt-1.5 truncate flex items-center gap-2">
                            <span>{a.college}</span>
-                           <span className="w-1 h-1 bg-[#E8DDD0] rounded-full" />
+                           <span className="w-1 h-1 bg-[#E2D8CC] rounded-full" />
                            <span>{new Date(a.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
                         </p>
                       </div>
@@ -483,10 +483,10 @@ export default function AdminPage() {
           </div>
 
           {/* Top Cities */}
-          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E8DDD0] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
+          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 min-h-[320px] lg:min-h-0">
             <div className="px-6 py-5 border-b border-[#FAF7F2] flex justify-between items-center shrink-0">
               <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Top Cities</h2>
-              <span className="text-[10px] font-[DM_Sans] font-bold uppercase tracking-wider text-[#7A7166] bg-[#FAF7F2] border border-[#E8DDD0] px-2.5 py-1 rounded-md">By Reg</span>
+              <span className="text-[10px] font-[DM_Sans] font-bold uppercase tracking-wider text-[#7A7166] bg-[#FAF7F2] border border-[#E2D8CC] px-2.5 py-1 rounded-md">By Reg</span>
             </div>
             <div className="flex-1 overflow-y-auto p-6 font-[DM_Sans]">
               {topCities.length === 0 ? (
@@ -532,7 +532,7 @@ export default function AdminPage() {
             <div className="p-6 overflow-y-auto flex-1">
               {activeKpiConfig.rows.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
-                  <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-[#e8631a]">
+                  <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-[#C84B11]">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
@@ -573,3 +573,7 @@ export default function AdminPage() {
     </>
   );
 }
+
+
+
+

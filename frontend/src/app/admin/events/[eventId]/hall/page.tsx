@@ -63,7 +63,7 @@ export default function AttachHallPage() {
             {halls.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-gray-500 mb-4">No saved hall layouts yet.</p>
-                <Link href="/admin/create-event" className="text-[#e8631a] font-bold hover:underline">
+                <Link href="/admin/create-event" className="text-[#C84B11] font-bold hover:underline">
                   Create an event with a hall layout first →
                 </Link>
               </div>
@@ -73,9 +73,9 @@ export default function AttachHallPage() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Select Hall Layout</label>
                   <div className="space-y-3">
                     {halls.map(h => (
-                      <label key={h._id} className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedHallId === h._id ? 'border-[#e8631a] bg-[#e8631a]/10' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <label key={h._id} className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedHallId === h._id ? 'border-[#C84B11] bg-[#C84B11]/10' : 'border-gray-200 hover:border-gray-300'}`}>
                         <input type="radio" name="hall" value={h._id} checked={selectedHallId === h._id}
-                          onChange={() => handleSelect(h._id)} className="accent-[#e8631a] mt-1 shrink-0"/>
+                          onChange={() => handleSelect(h._id)} className="accent-[#C84B11] mt-1 shrink-0"/>
                         <div className="min-w-0">
                           <p className="font-bold text-[#0E1B3D]">{h.hall_name}</p>
                           <p className="text-xs text-gray-500 leading-relaxed">{h.total_rows} rows × {h.seats_per_row} seats/row · Stage: {h.stage_position} · Entry: {h.entry_points}</p>
@@ -99,7 +99,7 @@ export default function AttachHallPage() {
                 )}
 
                 <button onClick={handleAttach} disabled={!selectedHallId || submitting}
-                  className="w-full bg-[#e8631a] hover:bg-[#d4741a] text-white font-bold py-3 rounded-xl transition-all disabled:opacity-40">
+                  className="w-full bg-[#C84B11] hover:bg-[#E8622A] text-white font-bold py-3 rounded-xl transition-all disabled:opacity-40">
                   {submitting ? 'Attaching…' : '🏛️ Attach Hall Layout to Event'}
                 </button>
               </>
@@ -109,3 +109,7 @@ export default function AttachHallPage() {
     </AdminLayout>
   );
 }
+
+
+
+

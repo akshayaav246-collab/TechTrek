@@ -217,8 +217,18 @@ const changePassword = async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ message: 'Both current and new passwords are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    }
+    if (!/(?=.*[A-Z])/.test(newPassword)) {
+      return res.status(400).json({ message: 'Password must contain at least one capital letter.' });
+    }
+    if (!/(?=.*\d)/.test(newPassword)) {
+      return res.status(400).json({ message: 'Password must contain at least one number.' });
+    }
+    if (!/(?=.*[!@#$%^&*])/.test(newPassword)) {
+      return res.status(400).json({ message: 'Password must contain at least one special character (!@#$%^&*).' });
     }
 
     const user = await User.findById(req.user._id);

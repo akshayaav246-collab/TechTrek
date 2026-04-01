@@ -41,7 +41,7 @@ export default function AdminLayout({
   ];
 
   return (
-    <div className="flex h-screen bg-[#0E1B3D] text-white font-body selection:bg-[#e8631a] selection:text-white">
+    <div className="flex h-screen bg-[#0E1B3D] text-white font-body selection:bg-[#C84B11] selection:text-white">
       <style dangerouslySetInnerHTML={{__html: "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Syne:wght@800&display=swap');"}}/>
       {/* Mobile Backdrop */}
       {sidebarOpen && (
@@ -59,12 +59,12 @@ export default function AdminLayout({
       `}>
         <div className="mb-6 flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#e8631a] rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-[#e8631a]/20">
+            <div className="w-12 h-12 bg-[#C84B11] rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-[#C84B11]/20">
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/></svg>
             </div>
             <div className="flex flex-col">
               <p className="text-white text-[22px] font-heading font-extrabold tracking-widest leading-none mb-1">TechTrek</p>
-              <p className="text-[#e8631a] text-[9px] font-bold uppercase tracking-[0.15em]">GKT Command Center</p>
+              <p className="text-[#C84B11] text-[9px] font-bold uppercase tracking-[0.15em]">GKT Command Center</p>
             </div>
           </div>
           <button onClick={closeSidebar} className="lg:hidden text-gray-400 hover:text-white p-1">
@@ -80,19 +80,19 @@ export default function AdminLayout({
               <Link key={item.label} href={item.href} onClick={item.href !== '#' ? closeSidebar : undefined}
                 className={`flex items-center justify-between w-full px-4 py-3.5 rounded-xl text-[14px] font-bold transition-all relative ${
                   active 
-                    ? 'bg-white/5 text-white shadow-sm border border-white/5 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:bg-[#e8631a] before:rounded-r-full overflow-hidden' 
+                    ? 'bg-white/5 text-white shadow-sm border border-white/5 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:bg-[#C84B11] before:rounded-r-full overflow-hidden' 
                     : 'text-white/60 hover:bg-white/5 hover:text-white border border-transparent'
                 }`}>
                 <div className="flex items-center gap-4">
                   <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 transition-colors ${
-                    active ? 'bg-[#e8631a] text-white shadow-md shadow-[#e8631a]/30' : 'bg-white/5 text-white/60 group-hover:bg-white/10 group-hover:text-white'
+                    active ? 'bg-[#C84B11] text-white shadow-md shadow-[#C84B11]/30' : 'bg-white/5 text-white/60 group-hover:bg-white/10 group-hover:text-white'
                   }`}>
                     {item.icon}
                   </div>
                   {item.label}
                 </div>
                 {item.badge && (
-                  <span className="bg-[#e8631a] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="bg-[#C84B11] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
                     {item.badge}
                   </span>
                 )}
@@ -106,8 +106,8 @@ export default function AdminLayout({
             <p className="text-[13px] font-[DM_Sans] font-bold text-white/80">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
           </div>
           <button onClick={() => { logout(); router.push('/admin/login'); }}
-            className="flex items-center justify-center gap-3 w-full bg-white/[0.08] text-white hover:bg-[#e8631a] py-3.5 px-4 rounded-xl font-bold transition-all duration-300 text-xs tracking-widest uppercase border border-white/10 shadow-sm group">
-            <svg className="w-4 h-4 flex-shrink-0 text-[#e8631a] group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            className="flex items-center justify-center gap-3 w-full bg-white/[0.08] text-white hover:bg-[#C84B11] py-3.5 px-4 rounded-xl font-bold transition-all duration-300 text-xs tracking-widest uppercase border border-white/10 shadow-sm group">
+            <svg className="w-4 h-4 flex-shrink-0 text-[#C84B11] group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             Sign Out
@@ -118,18 +118,18 @@ export default function AdminLayout({
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden bg-[#FAF7F2]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
         {/* Responsive Header */}
-        <header className="bg-[#FAF7F2]/80 backdrop-blur-md border-b border-[#E8DDD0] shrink-0 sticky top-0 z-10 py-6 min-h-[88px] flex items-center">
+        <header className="bg-[#FAF7F2]/80 backdrop-blur-md border-b border-[#E2D8CC] shrink-0 sticky top-0 z-10 py-6 min-h-[88px] flex items-center">
           <div className="px-4 sm:px-6 lg:px-8 w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <button 
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 -ml-2 text-[#7A7166] hover:bg-[#E8DDD0]/50 rounded-lg transition-colors shrink-0"
+                className="lg:hidden p-2 -ml-2 text-[#7A7166] hover:bg-[#E2D8CC]/50 rounded-lg transition-colors shrink-0"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
               </button>
               <div className="min-w-0 flex-1 flex items-center gap-3">
                 {title !== 'Dashboard' && (
-                  <Link href={backHref || "/admin"} className="text-[#C84B11] hover:text-[#E8622A] p-2 bg-[#E8DDD0]/50 rounded-xl transition-colors flex items-center justify-center shrink-0">
+                  <Link href={backHref || "/admin"} className="text-[#C84B11] hover:text-[#E8622A] p-2 bg-[#E2D8CC]/50 rounded-xl transition-colors flex items-center justify-center shrink-0">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                   </Link>
                 )}
@@ -158,3 +158,7 @@ export default function AdminLayout({
     </div>
   );
 }
+
+
+
+

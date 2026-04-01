@@ -50,7 +50,7 @@ function Clock() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
-  return <span className="font-mono text-xs text-[#e8631a]/70 tracking-wider">{dt}</span>;
+  return <span className="font-mono text-xs text-[#C84B11]/70 tracking-wider">{dt}</span>;
 }
 
 export default function AdminLoginPage() {
@@ -93,7 +93,7 @@ export default function AdminLoginPage() {
             animation: `floatBubble ${b.dur}s ease-in-out ${b.delay}s infinite alternate`,
           }}>
           <svg width={b.size} height={b.size} viewBox="0 0 24 24" fill="none"
-            stroke="#e8631a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+            stroke="#C84B11" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
             style={{ opacity: 0.42 }}>
             <path d={b.path}/>
           </svg>
@@ -108,7 +108,7 @@ export default function AdminLoginPage() {
       <nav className="relative z-10 flex items-center justify-between px-8 py-5 border-b border-white/8">
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#e8631a] flex items-center justify-center shadow-lg shadow-[#e8631a]/20">
+            <div className="w-9 h-9 rounded-xl bg-[#C84B11] flex items-center justify-center shadow-lg shadow-[#C84B11]/20">
               <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             </div>
             <span className="text-white font-bold text-base tracking-tight">TechTrek</span>
@@ -125,11 +125,11 @@ export default function AdminLoginPage() {
 
         {/* Logo + Heading */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-[#e8631a] flex items-center justify-center shadow-xl shadow-[#e8631a]/30 mb-5">
+          <div className="w-14 h-14 rounded-2xl bg-[#C84B11] flex items-center justify-center shadow-xl shadow-[#C84B11]/30 mb-5">
             <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           </div>
           <h1 className="font-heading font-extrabold text-5xl md:text-6xl text-white tracking-tight leading-none text-center">
-            Command <span className="text-[#e8631a]">Center</span>
+            Command <span className="text-[#C84B11]">Center</span>
           </h1>
           <p className="text-white/30 text-sm mt-2 tracking-widest text-center">Manage events, registrations, check-ins & performance</p>
         </div>
@@ -152,7 +152,7 @@ export default function AdminLoginPage() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
-                    Email Address <span className="text-[#e8631a]">*</span>
+                    Email Address <span className="text-[#C84B11]">*</span>
                   </label>
                   <div className="relative">
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -160,13 +160,13 @@ export default function AdminLoginPage() {
                     </svg>
                     <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
                       placeholder="you@techtrek.in"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/8 focus:border-[#e8631a]/60 transition-colors"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/8 focus:border-[#C84B11]/60 transition-colors"
                       style={{ background: 'rgba(255,255,255,0.04)' }} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
-                    Password <span className="text-[#e8631a]">*</span>
+                    Password <span className="text-[#C84B11]">*</span>
                   </label>
                   <div className="relative">
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -174,7 +174,7 @@ export default function AdminLoginPage() {
                     </svg>
                     <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
                       placeholder="••••••••••"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/8 focus:border-[#e8631a]/60 transition-colors"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none border border-white/8 focus:border-[#C84B11]/60 transition-colors"
                       style={{ background: 'rgba(255,255,255,0.04)' }} />
                   </div>
                 </div>
@@ -182,7 +182,7 @@ export default function AdminLoginPage() {
                 {/* Shiny Login button */}
                 <button type="submit" disabled={loading}
                   className="shiny-btn w-full relative overflow-hidden flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl transition-all mt-2 disabled:opacity-60"
-                  style={{ background: loading ? '#c47218' : '#e8631a' }}>
+                  style={{ background: loading ? '#C84B11' : '#C84B11' }}>
                   <span className="relative z-10">{loading ? 'Signing in…' : 'Login'}</span>
                   {!loading && (
                     <svg className="relative z-10 w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -223,3 +223,7 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
+
+
+

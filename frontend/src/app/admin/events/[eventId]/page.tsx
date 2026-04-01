@@ -33,6 +33,13 @@ function StatCard({ label, val, color, sub }: { label: string; val: number; colo
 
 function MediaTab({ eventId, token }: { eventId: string, token: string }) {
   const [photos, setPhotos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    const urls = photos.map(p => URL.createObjectURL(p));
+    setPhotoPreviews(urls);
+    return () => urls.forEach(u => URL.revokeObjectURL(u));
+  }, [photos]);
   const [uploading, setUploading] = useState(false);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
 
@@ -84,8 +91,15 @@ function MediaTab({ eventId, token }: { eventId: string, token: string }) {
         </div>
         <input type="file" multiple accept="image/*" onChange={e => setPhotos(Array.from(e.target.files||[]))} 
           className="text-sm border border-gray-200 p-3 rounded-xl bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-[#0E1B3D] file:text-white hover:file:bg-[#1a2d5a] transition-all" />
+        {photoPreviews.length > 0 && (
+          <div className="flex flex-wrap gap-3 my-2">
+            {photoPreviews.map((url, i) => (
+              <img key={i} src={url} alt={`Preview ${i+1}`} className="h-20 w-20 object-cover rounded-lg border border-gray-200 shadow-sm" />
+            ))}
+          </div>
+        )}
         <button disabled={uploading || photos.length === 0} onClick={handleUpload} 
-          className="bg-[#e8631a] hover:bg-[#c24c10] text-white px-6 py-2.5 font-bold rounded-xl self-start disabled:opacity-50 transition-all shadow-sm">
+          className="bg-[#C84B11] hover:bg-[#C84B11] text-white px-6 py-2.5 font-bold rounded-xl self-start disabled:opacity-50 transition-all shadow-sm">
           {uploading ? 'Uploading...' : 'Publish Photos to Gallery'}
         </button>
       </div>
@@ -98,7 +112,7 @@ function MediaTab({ eventId, token }: { eventId: string, token: string }) {
             <div key={f._id} className="p-5 border border-gray-100 rounded-2xl flex flex-col justify-between bg-gray-50/30 hover:shadow-md transition-shadow">
               <div>
                 <p className="font-bold text-[#0E1B3D] mb-1">{f.studentName} <span className="text-xs text-gray-400 font-medium ml-1">({f.college})</span></p>
-                <div className="flex gap-1 mb-3 text-[#e8631a] text-sm">
+                <div className="flex gap-1 mb-3 text-[#C84B11] text-sm">
                   {Array.from({length: 5}).map((_,i) => <span key={i}>{i < f.rating ? '★' : '☆'}</span>)}
                 </div>
                 <p className="text-sm text-gray-600 mb-4 bg-white p-4 rounded-xl border border-gray-100">"{f.comment}"</p>
@@ -248,7 +262,7 @@ export default function AdminEventDashboard() {
         ) : stats && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <StatCard label="Total Capacity" val={eventInfo?.capacity ?? 0} color="text-[#0E1B3D]"/>
-            <StatCard label="Registered" val={stats.registered} color="text-[#e8631a]"/>
+            <StatCard label="Registered" val={stats.registered} color="text-[#C84B11]"/>
             <StatCard label="Waitlisted" val={stats.waitlisted} color="text-amber-500"/>
             <StatCard label="Checked-In" val={stats.checkedIn} color="text-emerald-600"/>
             {eventInfo?.status === 'COMPLETED' ? (
@@ -276,7 +290,7 @@ export default function AdminEventDashboard() {
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by name or email…"
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-[#1C1A17] placeholder-gray-400 outline-none focus:border-[#e8631a] bg-white"/>
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-[#1C1A17] placeholder-gray-400 outline-none focus:border-[#C84B11] bg-white"/>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 hide-scrollbar shrink-0 w-[calc(100%+2rem)] sm:w-auto">
             {(['ALL','REGISTERED','WAITLISTED','CHECKED_IN'] as const).map(f => (
@@ -302,7 +316,7 @@ export default function AdminEventDashboard() {
               <div className="text-center py-16">
                 <SearchIcon className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                 <p className="text-gray-400 font-medium">No participants found</p>
-                {search && <button onClick={() => setSearch('')} className="mt-3 text-[#e8631a] text-sm font-bold hover:underline">Clear search</button>}
+                {search && <button onClick={() => setSearch('')} className="mt-3 text-[#C84B11] text-sm font-bold hover:underline">Clear search</button>}
               </div>
             ) : (
               // Inner Fragment replacing direct render
@@ -381,7 +395,7 @@ export default function AdminEventDashboard() {
             <div className="px-5 py-3.5 border-t border-gray-50 flex items-center justify-between">
               <p className="text-xs text-gray-400">Showing <span className="font-bold text-gray-600">{filtered.length}</span> of <span className="font-bold text-gray-600">{participants.length}</span> participants</p>
               <button onClick={downloadCSV} disabled={downloading}
-                className="text-xs font-bold text-[#e8631a] hover:underline flex items-center gap-1 disabled:opacity-50">
+                className="text-xs font-bold text-[#C84B11] hover:underline flex items-center gap-1 disabled:opacity-50">
                 <DownloadIcon className="w-3 h-3" /> Export filtered list
               </button>
             </div>
@@ -395,3 +409,7 @@ export default function AdminEventDashboard() {
     </AdminLayout>
   );
 }
+
+
+
+

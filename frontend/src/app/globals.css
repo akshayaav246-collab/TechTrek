@@ -3,7 +3,7 @@
 :root {
   --background: #FAF7F2;
   --foreground: #0E1B3D;
-  --primary: #E8631A;
+  --primary: #C84B11;
   --secondary: #0E1B3D;
   --accent: #8B1A2E;
   --card: #FFFFFF;
@@ -37,15 +37,19 @@
 }
 
 html {
-  font-size: 17px; /* base bump — scales all rem/em values up */
+  font-size: 17px; 
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body);
-  font-size: 0.95rem; /* ~16px at the new base */
+  font-size: 0.95rem; 
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -98,3 +102,7 @@ th, td {
   animation: buttonShine 2.5s ease-in-out infinite;
   pointer-events: none;
 }
+
+
+
+

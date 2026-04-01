@@ -46,7 +46,7 @@ function FormInput({ label, type = 'text', placeholder = '', value, onChange, re
       <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">{label}</label>
       <input type={type} placeholder={placeholder} value={value} required={required}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm" />
+        className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm" />
     </div>
   );
 }
@@ -175,8 +175,8 @@ export default function EditEventPage() {
               <div className="flex items-center gap-0 mb-8">
                 {STEPS.map((s, i) => (
                   <div key={i} className="flex items-center flex-1 last:flex-none">
-                    <div className={`flex items-center gap-2 ${i + 1 === step ? 'text-[#e8631a]' : i + 1 < step ? 'text-emerald-600' : 'text-gray-300'}`}>
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 cursor-pointer ${i + 1 === step ? 'border-[#e8631a] bg-[#e8631a] text-white' : i + 1 < step ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 text-gray-400'}`}
+                    <div className={`flex items-center gap-2 ${i + 1 === step ? 'text-[#C84B11]' : i + 1 < step ? 'text-emerald-600' : 'text-gray-300'}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 cursor-pointer ${i + 1 === step ? 'border-[#C84B11] bg-[#C84B11] text-white' : i + 1 < step ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 text-gray-400'}`}
                         onClick={() => setStep((i + 1) as Step)}>
                         {i + 1 < step ? '✓' : i + 1}
                       </div>
@@ -205,7 +205,7 @@ export default function EditEventPage() {
                     <div>
                       <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Description</label>
                       <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={4} placeholder="Describe the event…"
-                        className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] resize-none transition-colors shadow-sm"/>
+                        className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] resize-none transition-colors shadow-sm"/>
                     </div>
                     <FormInput label="Topics (comma separated)" value={form.topics} onChange={v => set('topics', v)} placeholder="AI, ML, IoT, Robotics" />
                   </div>
@@ -223,32 +223,32 @@ export default function EditEventPage() {
                         <div className="relative">
                           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</span>
                           <input type="number" min={0} value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0 = Free"
-                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm" />
+                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl pl-8 pr-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm" />
                         </div>
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Status</label>
-                      <select className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm" value={form.status} onChange={e => set('status', e.target.value)}>
+                      <select className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm" value={form.status} onChange={e => set('status', e.target.value)}>
                         <option value="UPCOMING">Upcoming</option>
                         <option value="COMPLETED">Completed</option>
                       </select>
                     </div>
-                    <div className="bg-[#FAF8F4] border border-[#e8631a]/20 rounded-2xl p-5 mt-4">
+                    <div className="bg-[#FAF8F4] border border-[#C84B11]/20 rounded-2xl p-5 mt-4">
                       <h3 className="font-bold text-[#0E1B3D] mb-4 text-sm">Agenda Items (Optional)</h3>
                       {form.agenda.map((item, i) => (
                         <div key={i} className="grid grid-cols-4 gap-3 mb-3">
                           {['time', 'title', 'duration', 'speaker'].map(k => (
                             <input key={k} value={item[k as keyof AgendaItem]} onChange={e => setAgenda(i, k, e.target.value)}
                               placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
-                              className="bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
+                              className="bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
                           ))}
                           {form.agenda.length > 1 && (
                             <button type="button" onClick={() => removeAgenda(i)} className="text-red-400 text-xs col-start-4 text-right">Remove</button>
                           )}
                         </div>
                       ))}
-                      <button type="button" onClick={addAgenda} className="text-[#e8631a] text-xs font-bold mt-1 hover:underline">+ Add Agenda Item</button>
+                      <button type="button" onClick={addAgenda} className="text-[#C84B11] text-xs font-bold mt-1 hover:underline">+ Add Agenda Item</button>
                     </div>
                   </div>
                 )}
@@ -264,7 +264,7 @@ export default function EditEventPage() {
                       <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
                         <label className="block text-xs font-bold uppercase tracking-wider text-blue-600 mb-2">Autofill from Saved Hall</label>
                         <select onChange={e => autofillHall(e.target.value)}
-                          className="w-full border border-blue-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#e8631a] bg-white">
+                          className="w-full border border-blue-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#C84B11] bg-white">
                           <option value="">— Keep current layout —</option>
                           {savedHalls.map(h => (
                             <option key={h._id} value={h._id}>{h.hall_name} ({h.total_rows} rows × {h.seats_per_row} seats)</option>
@@ -276,20 +276,20 @@ export default function EditEventPage() {
                       <div>
                         <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Hall Name *</label>
                         <input value={layout.hall_name} onChange={e => setL('hall_name', e.target.value)} placeholder="Main Auditorium"
-                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
+                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Total Rows</label>
                           <input type="number" min={1} max={52} value={layout.total_rows}
                             onChange={e => setL('total_rows', Math.max(1, Math.min(52, Number(e.target.value))))}
-                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
+                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
                         </div>
                         <div>
                           <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Seats / Row</label>
                           <input type="number" min={1} value={layout.seats_per_row}
                             onChange={e => setL('seats_per_row', Math.max(1, Number(e.target.value)))}
-                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
+                            className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
                         </div>
                       </div>
                     </div>
@@ -297,13 +297,13 @@ export default function EditEventPage() {
                       <div>
                         <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">Aisle After Seat (comma separated)</label>
                         <input value={aisleInput} onChange={e => applyAisles(e.target.value)} placeholder="e.g. 10, 20"
-                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
+                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
                         <p className="text-[10px] text-gray-400 mt-1">Inserts an aisle gap after these seat positions</p>
                       </div>
                       <div>
                         <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">VIP / Reserved Rows (comma separated)</label>
                         <input value={reservedInput} onChange={e => applyReserved(e.target.value)} placeholder="e.g. A, B"
-                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
+                          className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
                         <p className="text-[10px] text-gray-400 mt-1">These rows will be highlighted as VIP</p>
                       </div>
                     </div>
@@ -313,7 +313,7 @@ export default function EditEventPage() {
                         <div className="flex gap-3">
                           {(['front', 'back'] as const).map(pos => (
                             <button key={pos} type="button" onClick={() => setL('stage_position', pos)}
-                              className={`flex-1 bg-white shadow-sm py-2.5 rounded-xl border text-sm font-bold transition-all ${layout.stage_position === pos ? 'bg-[#e8631a] text-white border-[#e8631a]' : 'border-gray-200 text-gray-500 hover:border-[#e8631a]'}`}>
+                              className={`flex-1 bg-white shadow-sm py-2.5 rounded-xl border text-sm font-bold transition-all ${layout.stage_position === pos ? 'bg-[#C84B11] text-white border-[#C84B11]' : 'border-gray-200 text-gray-500 hover:border-[#C84B11]'}`}>
                               {pos === 'front' ? '⬛ Front' : 'Back ⬛'}
                             </button>
                           ))}
@@ -357,13 +357,13 @@ export default function EditEventPage() {
                             <div key={k} className={k === 'bio' ? 'col-span-2' : ''}>
                               <label className="block text-xs font-bold tracking-wide text-gray-500 mb-1">{lbl}</label>
                               <input value={sp[k]} onChange={e => setSpeaker(i, k, e.target.value)} placeholder={lbl}
-                                className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#e8631a] transition-colors shadow-sm"/>
+                                className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
                             </div>
                           ))}
                         </div>
                       </div>
                     ))}
-                    <button onClick={addSpeaker} className="text-[#e8631a] text-sm font-bold hover:underline">+ Add Speaker</button>
+                    <button onClick={addSpeaker} className="text-[#C84B11] text-sm font-bold hover:underline">+ Add Speaker</button>
                   </div>
                 )}
 
@@ -411,7 +411,7 @@ export default function EditEventPage() {
                   </button>
                   {step < 5 ? (
                     <button onClick={() => setStep(s => (s + 1) as Step)}
-                      className="bg-[#e8631a] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#d4741a] transition-colors">
+                      className="bg-[#C84B11] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#E8622A] transition-colors">
                       {step === 3 && !layout.hall_name ? 'Skip Hall Layout →' : 'Next →'}
                     </button>
                   ) : (
@@ -430,3 +430,7 @@ export default function EditEventPage() {
     </AdminLayout>
   );
 }
+
+
+
+

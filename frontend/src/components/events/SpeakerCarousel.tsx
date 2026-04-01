@@ -1,96 +1,145 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-type Speaker = { _id: string; name: string; role: string; company: string; bio: string };
+type Speaker = { _id: string; name: string; role: string; company: string; bio: string; headline?: string; tags?: string[]; date?: string; duration?: string; image?: string; };
+
+function CalendarIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+    </svg>
+  );
+}
+
+function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+  );
+}
 
 export function SpeakerCarousel({ speakers }: { speakers: Speaker[] }) {
-  const [startIndex, setStartIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [cardsToShow, setCardsToShow] = useState(3);
 
-  // Render 3 at a time normally, responsiveness handles scaling down to 1 
-  // column but practically the DOM holds 3 for the user to swipe/scroll or just be blocks
-  const visibleSpeakers = speakers.slice(startIndex, startIndex + 3);
-  const showPrev = startIndex > 0;
-  const showNext = startIndex + 3 < speakers.length;
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) setCardsToShow(1);
+      else if (window.innerWidth < 1024) setCardsToShow(2);
+      else setCardsToShow(3);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-  const next = () => {
-    if (showNext) setStartIndex(s => s + 1);
+  const maxIndex = Math.max(0, speakers.length - cardsToShow);
+
+  useEffect(() => {
+    if (currentIndex > maxIndex) {
+      setCurrentIndex(maxIndex);
+    }
+  }, [maxIndex, currentIndex]);
+
+  const handleNext = () => {
+    if (currentIndex < maxIndex) setCurrentIndex(prev => prev + 1);
   };
 
-  const prev = () => {
-    if (showPrev) setStartIndex(s => s - 1);
+  const handlePrev = () => {
+    if (currentIndex > 0) setCurrentIndex(prev => prev - 1);
   };
 
   if (speakers.length === 0) return null;
 
   return (
     <div className="w-full">
-      <h2 className="text-lg md:text-xl font-bold uppercase tracking-[0.2em] text-[#e8631a] mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="w-8 h-px bg-[#e8631a]"></span> Featured Speakers
-        </div>
-        
-        {speakers.length > 3 && (
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={prev}
-              disabled={!showPrev}
-              className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${showPrev ? 'border-[#0E1B3D]/20 text-[#0E1B3D] hover:bg-[#0E1B3D] hover:border-[#0E1B3D] hover:text-white hover:scale-105 shadow-sm' : 'border-gray-200 text-gray-300 cursor-not-allowed opacity-50'}`}
-              aria-label="Previous speakers"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <button 
-              onClick={next}
-              disabled={!showNext}
-              className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${showNext ? 'border-[#0E1B3D]/20 text-[#0E1B3D] hover:bg-[#0E1B3D] hover:border-[#0E1B3D] hover:text-white hover:scale-105 shadow-sm' : 'border-gray-200 text-gray-300 cursor-not-allowed opacity-50'}`}
-              aria-label="Next speakers"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-          </div>
-        )}
+      <h2 className="text-lg md:text-xl font-bold uppercase tracking-[0.2em] text-[#e8631a] mb-8 flex items-center">
+        <span className="w-8 h-px bg-[#e8631a] mr-4"></span> Featured Speakers
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-all duration-300">
-        {visibleSpeakers.map((speaker, index) => (
-          <div key={`${speaker._id}-${index}`} className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 bg-white group relative overflow-hidden rounded-[2rem] h-full min-h-[440px] flex flex-col p-0">
-            {/* Top Half (Dark edge-to-edge block) */}
-            <div className="bg-[#0E1B3D] border-b-[4px] border-[#e8631a] flex flex-col items-center pt-8 pb-6 px-4 relative shrink-0 text-center w-full">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#e8631a]/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150 pointer-events-none"></div>
-              
-              <div className="w-20 h-20 rounded-full bg-[#e8631a] flex items-center justify-center text-white font-bebas text-4xl shadow-lg border-[3px] border-[#0E1B3D] mb-4 relative z-10 shrink-0">
-                {speaker.name.charAt(0).toUpperCase()}{speaker.name.split(' ')[1] ? speaker.name.split(' ')[1].charAt(0).toUpperCase() : ''}
-              </div>
-              
-              <h4 className="font-extrabold font-heading tracking-tight text-3xl text-white mb-2 relative z-10 shrink-0">{speaker.name}</h4>
-              <div className="text-white/60 font-semibold text-xs tracking-wide relative z-10 capitalize shrink-0">
-                {speaker.role}, <span className="text-white/40">{speaker.company}</span>
-              </div>
-            </div>
+      <div className="relative group w-full px-8 md:px-20 lg:px-24">
+        
+        {/* Left Arrow */}
+        {currentIndex > 0 && (
+          <button 
+            onClick={handlePrev}
+            className="absolute left-0 md:left-4 lg:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+            aria-label="Previous speakers"
+          >
+            <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
 
-            {/* Bottom Half (Light) */}
-            <div className="flex-1 flex flex-col bg-white relative text-left px-6 py-8 w-full">
-              <div className="flex flex-wrap gap-2 mb-4 shrink-0">
-                <span className="px-2.5 py-1 bg-[#e8631a]/10 text-[#e8631a] text-[9px] font-extrabold uppercase rounded-lg tracking-widest">#TECHINDUSTRY</span>
-                <span className="px-2.5 py-1 bg-[#e8631a]/10 text-[#e8631a] text-[9px] font-extrabold uppercase rounded-lg tracking-widest">#AI</span>
+        {/* Overflow Container */}
+        <div className="overflow-hidden p-4 -mx-4">
+          {/* Sliding Track */}
+          <div 
+            className="flex transition-transform duration-500 ease-in-out"
+            style={{ 
+              width: `${(speakers.length * 100) / cardsToShow}%`, 
+              transform: `translateX(-${currentIndex * (100 / speakers.length)}%)` 
+            }}
+          >
+            {speakers.map((speaker, idx) => (
+              <div 
+                key={`${speaker._id}-${idx}`} 
+                className="flex-shrink-0 px-4"
+                style={{ width: `${100 / speakers.length}%` }}
+              >
+                <div className="flex flex-col h-full rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border border-border group/card bg-card">
+                  <div className="bg-secondary/95 p-6 flex flex-col items-center justify-center text-center relative overflow-hidden h-36 md:h-40 shrink-0">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover/card:scale-150"></div>
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary flex items-center justify-center text-white font-bebas text-xl md:text-2xl mb-3 md:mb-4 relative z-10 shadow-md">
+                      {speaker.name.charAt(0).toUpperCase()}{speaker.name.split(' ')[1] ? speaker.name.split(' ')[1].charAt(0).toUpperCase() : ''}
+                    </div>
+                    <h3 className="text-white font-bold text-lg md:text-xl relative z-10">{speaker.name}</h3>
+                    <p className="text-white/70 text-xs md:text-sm mt-1 relative z-10">{speaker.role}, {speaker.company}</p>
+                  </div>
+                  
+                  <div className="p-6 md:p-8 flex-grow flex flex-col">
+                    <div className="flex flex-wrap gap-2 mb-3 md:mb-4">
+                      {(speaker.tags || ['#TECH', '#FEATURED']).map((tag: string) => (
+                        <span key={tag} className="text-[10px] font-bold tracking-widest uppercase text-[#e8631a] bg-[#e8631a]/10 px-2 py-1 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <h4 className="font-dm font-bold text-xl leading-snug mb-3 text-secondary">
+                      {speaker.headline || `Insights from ${speaker.name} on ${speaker.company}'s innovations`}
+                    </h4>
+                    <p className="text-foreground/70 text-sm mb-6 flex-grow">
+                      {speaker.bio || "Join this exciting session to gain industry-leading insights."}
+                    </p>
+                    <div className="flex justify-between items-center text-xs text-foreground/70 font-medium border-t border-border pt-4 mb-6">
+                      <div className="flex items-center gap-1"><CalendarIcon className="w-4 h-4 text-foreground/60" /> {speaker.date || "TBD"}</div>
+                      <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-foreground/60" /> {speaker.duration || "45 mins"}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              
-              <h5 className="font-heading font-black text-xl text-[#0E1B3D] mb-3 leading-snug shrink-0">
-                "India's $1T Tech Dream: What It Means for the Class of {new Date().getFullYear() + 1}"
-              </h5>
-              
-              <p className="text-[13px] text-[#0E1B3D]/70 leading-relaxed font-semibold flex-1 mb-2">
-                {speaker.bio}
-              </p>
-
-              <div className="border-t border-[#0E1B3D]/10 mt-4 pt-4 shrink-0">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#0E1B3D]/30">{speaker.company}</span>
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Right Arrow */}
+        {currentIndex < maxIndex && (
+          <button 
+            onClick={handleNext}
+            className="absolute right-0 md:right-4 lg:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+            aria-label="Next speakers"
+          >
+            <svg className="w-5 h-5 md:w-6 md:h-6 -mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+
       </div>
     </div>
   );
 }
+

@@ -43,7 +43,7 @@ export default function RootLayout({
       className={`${outfit.variable} ${plusJakartaSans.variable} ${bebasNeue.variable} ${dmSerifDisplay.variable} font-body antialiased`}
     >
       <body
-        className={`min-h-screen flex flex-col font-body bg-background text-foreground overflow-x-hidden w-full max-w-[100vw]`}
+        className={`min-h-screen flex flex-col font-body bg-background text-foreground overflow-x-hidden w-full max-w-full`}
       >
         <AuthProvider>
           <SiteShell>{children}</SiteShell>
