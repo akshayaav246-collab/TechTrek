@@ -36,19 +36,14 @@ export function SpeakerCarousel({ speakers }: { speakers: Speaker[] }) {
   }, []);
 
   const maxIndex = Math.max(0, speakers.length - cardsToShow);
-
-  useEffect(() => {
-    if (currentIndex > maxIndex) {
-      setCurrentIndex(maxIndex);
-    }
-  }, [maxIndex, currentIndex]);
+  const safeCurrentIndex = Math.min(currentIndex, maxIndex);
 
   const handleNext = () => {
-    if (currentIndex < maxIndex) setCurrentIndex(prev => prev + 1);
+    if (safeCurrentIndex < maxIndex) setCurrentIndex(prev => prev + 1);
   };
 
   const handlePrev = () => {
-    if (currentIndex > 0) setCurrentIndex(prev => prev - 1);
+    if (safeCurrentIndex > 0) setCurrentIndex(prev => prev - 1);
   };
 
   if (speakers.length === 0) return null;
@@ -62,7 +57,7 @@ export function SpeakerCarousel({ speakers }: { speakers: Speaker[] }) {
       <div className="relative group w-full px-8 md:px-20 lg:px-24">
         
         {/* Left Arrow */}
-        {currentIndex > 0 && (
+        {safeCurrentIndex > 0 && (
           <button 
             onClick={handlePrev}
             className="absolute left-0 md:left-4 lg:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -81,7 +76,7 @@ export function SpeakerCarousel({ speakers }: { speakers: Speaker[] }) {
             className="flex transition-transform duration-500 ease-in-out"
             style={{ 
               width: `${(speakers.length * 100) / cardsToShow}%`, 
-              transform: `translateX(-${currentIndex * (100 / speakers.length)}%)` 
+              transform: `translateX(-${safeCurrentIndex * (100 / speakers.length)}%)` 
             }}
           >
             {speakers.map((speaker, idx) => (
@@ -126,7 +121,7 @@ export function SpeakerCarousel({ speakers }: { speakers: Speaker[] }) {
         </div>
 
         {/* Right Arrow */}
-        {currentIndex < maxIndex && (
+        {safeCurrentIndex < maxIndex && (
           <button 
             onClick={handleNext}
             className="absolute right-0 md:right-4 lg:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -142,4 +137,3 @@ export function SpeakerCarousel({ speakers }: { speakers: Speaker[] }) {
     </div>
   );
 }
-

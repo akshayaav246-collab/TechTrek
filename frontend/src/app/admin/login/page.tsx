@@ -65,14 +65,13 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch('http://localhost:5000/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
-      if (data.role !== 'admin' && data.role !== 'superAdmin') throw new Error('Access denied.');
       login(data, data.token);
       router.push(data.role === 'superAdmin' ? '/superadmin' : '/admin');
     } catch (err: unknown) {
@@ -131,7 +130,7 @@ export default function AdminLoginPage() {
           <h1 className="font-heading font-extrabold text-5xl md:text-6xl text-white tracking-tight leading-none text-center">
             Command <span className="text-[#C84B11]">Center</span>
           </h1>
-          <p className="text-white/30 text-sm mt-2 tracking-widest text-center">Manage events, registrations, check-ins & performance</p>
+            <p className="text-white/30 text-sm mt-2 tracking-widest text-center">Secure admin session required for check-ins and live operations</p>
         </div>
 
         {/* Login Card */}

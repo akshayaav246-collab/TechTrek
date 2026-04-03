@@ -4,10 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { CheckCircleIcon, PlusIcon, GridIcon, QrIcon, ListIcon, ClockIcon, AlertIcon, UsersIcon, BuildingIcon, ZapIcon } from '@/components/Icons';
-import { useRef } from 'react';
-
-type Result = { message: string; studentName?: string; studentEmail?: string; college?: string; eventName?: string; alreadyCheckedIn?: boolean; isError?: boolean };
+import { CheckCircleIcon, PlusIcon, QrIcon, ClockIcon, BuildingIcon } from '@/components/Icons';
 
 type EventRow = {
   eventId: string; name: string; collegeName: string; city: string; status: string; dateTime: string;
@@ -22,61 +19,13 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export default function AdminEventsPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [filter, setFilter] = useState<'ALL' | 'UPCOMING' | 'COMPLETED'>('ALL');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  // Scanner State
-  const [showScanner, setShowScanner] = useState(false);
-  const [result, setResult] = useState<Result | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [scannerReady, setScannerReady] = useState(false);
-  const [manual, setManual] = useState('');
-  const scannerRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const html5QrRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (showScanner && !scannerReady) {
-      if (document.querySelector('script[src*="html5-qrcode"]')) {
-        setScannerReady(true); return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-      script.onload = () => setScannerReady(true);
-      document.head.appendChild(script);
-    }
-  }, [showScanner, scannerReady]);
-
-  useEffect(() => {
-    if (!showScanner || !scannerReady || !scannerRef.current) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const scanner = new (window as any).Html5Qrcode('global-qr-scanner');
-    html5QrRef.current = scanner;
-    scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } },
-      async (text: string) => { if (!processing) await processQR(text); }, undefined
-    ).catch(console.error);
-    return () => { scanner.stop().catch(() => {}); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showScanner, scannerReady]);
-
-  const processQR = async (raw: string) => {
-    setProcessing(true); setResult(null);
-    try {
-      const res = await fetch('http://localhost:5000/api/checkin', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ qrPayload: raw })
-      });
-      const data = await res.json();
-      setResult({ ...data, isError: !res.ok });
-      if (res.ok) await fetchEvents();
-    } catch { setResult({ message: 'Network error.', isError: true }); }
-    finally { setProcessing(false); }
-  };
 
   const fetchEvents = useCallback(async () => {
     if (!user || !token) return;
@@ -97,10 +46,11 @@ export default function AdminEventsPage() {
   }, [user, token]);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user || !token) { router.push('/admin/login'); return; }
     if (user.role !== 'admin' && user.role !== 'superAdmin') { router.push('/'); return; }
     fetchEvents();
-  }, [user, token, router, fetchEvents]);
+  }, [user, token, isLoading, router, fetchEvents]);
 
   const toggleCheckin = async (evt: EventRow, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -129,7 +79,12 @@ export default function AdminEventsPage() {
 
   const completeEvent = async (eventId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Mark this event as completed?')) return;
+    if (confirmDelete !== eventId + '-complete') {
+      setConfirmDelete(eventId + '-complete');
+      setTimeout(() => setConfirmDelete(null), 5000);
+      return;
+    }
+    setConfirmDelete(null);
     setActionLoading(eventId + '-complete');
     try {
       const res = await fetch(`http://localhost:5000/api/events/${eventId}/complete`, {
@@ -141,6 +96,7 @@ export default function AdminEventsPage() {
     finally { setActionLoading(null); }
   };
 
+  if (isLoading) return null;
   if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) return null;
 
   const getDisplayStatus = (evt: EventRow) => {
@@ -156,10 +112,10 @@ export default function AdminEventsPage() {
       title="All Events"
       headerActions={
         <>
-          <button onClick={() => setShowScanner(true)}
+          <Link href="/admin/checkin"
             className="flex items-center justify-center gap-2 bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-200 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm w-full sm:w-auto">
-            <QrIcon className="w-4 h-4" /> Scan QR
-          </button>
+            <QrIcon className="w-4 h-4" /> Secure Scanner
+          </Link>
           <Link href="/admin/create-event"
             className="flex items-center justify-center gap-2 bg-[#0E1B3D] hover:bg-[#1a2d5a] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow w-full sm:w-auto">
             <PlusIcon className="w-4 h-4" /> Create Event
@@ -433,67 +389,6 @@ export default function AdminEventsPage() {
         </div>
       </div>
 
-      {/* ── QR Scanner Modal ────────────────────────────────────── */}
-      {showScanner && (
-        <div className="fixed inset-0 bg-[#0E1B3D]/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 font-body">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
-            <div className="px-6 py-4 flex justify-between items-center text-center relative border-b border-gray-100">
-              <h3 className="font-heading font-extrabold text-[#0E1B3D] w-full text-xl">Event Check-In</h3>
-              <button 
-                onClick={() => { setShowScanner(false); setResult(null); setManual(''); }} 
-                className="absolute right-5 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            
-            <div className="p-6">
-              {/* Scanner */}
-              <div className="bg-[#0E1B3D] rounded-2xl overflow-hidden shadow-inner mb-4">
-                <div id="global-qr-scanner" ref={scannerRef} className="w-full" style={{ minHeight: '280px' }}></div>
-                {!scannerReady && (<div className="flex items-center justify-center h-64 text-white/50 font-bold animate-pulse text-sm">Loading camera…</div>)}
-              </div>
-
-              {/* Status/Result */}
-              {processing && <div className="bg-gray-50 rounded-xl p-4 mb-4 text-center text-[#0E1B3D] font-bold text-sm animate-pulse border border-gray-100">Verifying code…</div>}
-              
-              {result && !processing && (
-                <div className={`border-2 rounded-xl p-4 mb-4 ${result.alreadyCheckedIn ? 'bg-amber-50 border-amber-300' : result.isError ? 'bg-red-50 border-red-300' : 'bg-emerald-50 border-emerald-300'}`}>
-                  <div className="flex items-start gap-3">
-                    {result.alreadyCheckedIn ? <AlertIcon className="w-6 h-6 shrink-0 mt-0.5 text-amber-500"/> : result.isError ? <AlertIcon className="w-6 h-6 shrink-0 mt-0.5 text-red-500"/> : <CheckCircleIcon className="w-6 h-6 shrink-0 mt-0.5 text-emerald-500"/>}
-                    <div>
-                      <p className="font-bold text-[#0E1B3D] text-sm">{result.message}</p>
-                      {result.studentName && (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-xs font-bold text-[#0E1B3D]/80 flex items-center gap-1.5"><UsersIcon className="w-3.5 h-3.5" /> {result.studentName}</p>
-                          {result.college && <p className="text-[10px] text-[#0E1B3D]/60 flex items-center gap-1.5"><BuildingIcon className="w-3 h-3" /> {result.college}</p>}
-                          {result.eventName && <p className="text-[10px] text-[#0E1B3D]/60 flex items-center gap-1.5"><ZapIcon className="w-3 h-3" /> {result.eventName}</p>}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <button onClick={() => { setResult(null); setManual(''); }} className="mt-3 w-full text-[10px] uppercase tracking-widest font-bold text-gray-400 hover:text-gray-600 transition-colors text-center border-t border-black/5 pt-2">
-                    Scan Next →
-                  </button>
-                </div>
-              )}
-
-              {/* Manual Entry */}
-              <details className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden">
-                <summary className="px-4 py-3 text-xs font-bold text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2"><ZapIcon className="w-3 h-3" /> Manual QR Entry</summary>
-                <div className="p-4 pt-0">
-                  <textarea value={manual} onChange={e => setManual(e.target.value)} rows={2}
-                    placeholder='Paste payload…'
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-700 outline-none focus:border-emerald-500 resize-none mb-2"/>
-                  <button onClick={() => processQR(manual.trim())} disabled={!manual.trim()}
-                    className="w-full bg-[#0E1B3D] text-white font-bold py-2 rounded-lg text-xs hover:bg-[#1a2d5a] transition-colors disabled:opacity-40">
-                    Submit Code
-                  </button>
-                </div>
-              </details>
-            </div>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   );
 }

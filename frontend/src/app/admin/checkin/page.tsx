@@ -8,7 +8,7 @@ import { CheckCircleIcon, AlertIcon, UsersIcon, BuildingIcon, ZapIcon } from '@/
 type Result = { message: string; studentName?: string; studentEmail?: string; college?: string; eventName?: string; alreadyCheckedIn?: boolean; isError?: boolean };
 
 export default function AdminCheckInPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
   const [result, setResult] = useState<Result | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -19,14 +19,15 @@ export default function AdminCheckInPage() {
   const html5QrRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!user || !token) { router.push('/login'); return; }
+    if (isLoading) return;
+    if (!user || !token) { router.push('/admin/login'); return; }
     if (user.role !== 'admin' && user.role !== 'superAdmin') { router.push('/'); return; }
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
     script.onload = () => setScannerReady(true);
     document.head.appendChild(script);
     return () => { try { document.head.removeChild(script); } catch {} };
-  }, [user, token, router]);
+  }, [user, token, isLoading, router]);
 
   useEffect(() => {
     if (!scannerReady || !scannerRef.current) return;
@@ -43,9 +44,9 @@ export default function AdminCheckInPage() {
   const processQR = async (raw: string) => {
     setProcessing(true); setResult(null);
     try {
-      const res = await fetch('http://localhost:5000/api/checkin', {
+      const res = await fetch('http://localhost:5000/api/attendance/checkin', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ qrPayload: raw })
+        body: JSON.stringify({ encryptedQrPayload: raw })
       });
       const data = await res.json();
       setResult({ ...data, isError: !res.ok });
@@ -53,6 +54,7 @@ export default function AdminCheckInPage() {
     finally { setProcessing(false); }
   };
 
+  if (isLoading) return null;
   if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) return null;
 
   const resultBg = !result ? '' : result.alreadyCheckedIn ? 'bg-amber-50 border-amber-300' : result.isError ? 'bg-red-50 border-red-300' : 'bg-emerald-50 border-emerald-300';
@@ -66,7 +68,7 @@ export default function AdminCheckInPage() {
           <div className="mb-6 text-center">
             <span className="inline-block bg-[#C84B11]/15 text-[#C84B11] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">Scan Mode</span>
             <h1 className="font-heading font-extrabold text-3xl text-[#0E1B3D]">QR Check-In</h1>
-            <p className="text-gray-400 text-sm mt-1">Point camera at participant&apos;s QR code</p>
+            <p className="text-gray-400 text-sm mt-1">Only authenticated admins can submit scans from this console</p>
           </div>
 
           {/* Scanner */}
@@ -105,7 +107,7 @@ export default function AdminCheckInPage() {
             <summary className="px-5 py-3.5 text-sm font-bold text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2"><ZapIcon className="w-3.5 h-3.5" /> Manual QR Entry</summary>
             <div className="p-5 pt-0">
               <textarea value={manual} onChange={e => setManual(e.target.value)} rows={3}
-                placeholder='Paste QR JSON payload here…'
+                placeholder='Paste encrypted QR payload here…'
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-xs font-mono text-gray-700 outline-none focus:border-[#C84B11] resize-none mb-3"/>
               <button onClick={() => processQR(manual.trim())} disabled={!manual.trim()}
                 className="w-full bg-[#0E1B3D] text-white font-bold py-2.5 rounded-xl text-sm hover:bg-[#1a2d5a] transition-colors disabled:opacity-40">

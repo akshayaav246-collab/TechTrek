@@ -8,6 +8,7 @@ const feedbackSchema = new mongoose.Schema({
   rating: { type: Number, required: true, min: 1, max: 5 },
   comment: { type: String, required: true },
   isApprovedForLanding: { type: Boolean, default: false },
+  isApprovedForEventPage: { type: Boolean, default: false },
 }, { timestamps: true });
 
 const Feedback = mongoose.model('Feedback', feedbackSchema);

@@ -3,7 +3,6 @@ import { useState, ReactNode } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { GridIcon, PlusIcon, ListIcon } from '@/components/Icons';
 
 export default function AdminLayout({
   children,
@@ -16,11 +15,12 @@ export default function AdminLayout({
   headerActions?: ReactNode,
   backHref?: string,
 }) {
-  const { user, logout } = useAuth();
+  const { user, token, logout, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  if (isLoading) return null;
   if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) return null;
 
   const closeSidebar = () => setSidebarOpen(false);
@@ -29,8 +29,14 @@ export default function AdminLayout({
     { href: '/admin', label: 'Dashboard', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
     ) },
+    { href: '/admin/checkin', label: 'Secure Scanner', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 3H5a2 2 0 00-2 2v2m16-4h-2m2 0a2 2 0 012 2v2M3 17v2a2 2 0 002 2h2m12-4v2a2 2 0 01-2 2h-2M8 8h8v8H8z" /></svg>
+    ) },
     { href: '/admin/create-event', label: 'Create Event', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+    ) },
+    { href: '/admin/ai-studio', label: 'AI Studio', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
     ) },
     { href: '/admin/events', label: 'All Events', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -39,6 +45,22 @@ export default function AdminLayout({
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
     ) },
   ];
+
+  const handleLogout = async () => {
+    try {
+      if (token) {
+        await fetch('http://localhost:5000/api/admin/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } catch {
+      // Best effort logout; local session is still cleared below.
+    } finally {
+      logout();
+      router.push('/admin/login');
+    }
+  };
 
   return (
     <div className="flex h-screen bg-[#0E1B3D] text-white font-body selection:bg-[#C84B11] selection:text-white">
@@ -105,7 +127,7 @@ export default function AdminLayout({
           <div className="text-center mb-4">
             <p className="text-[13px] font-[DM_Sans] font-bold text-white/80">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
           </div>
-          <button onClick={() => { logout(); router.push('/admin/login'); }}
+          <button onClick={handleLogout}
             className="flex items-center justify-center gap-3 w-full bg-white/[0.08] text-white hover:bg-[#C84B11] py-3.5 px-4 rounded-xl font-bold transition-all duration-300 text-xs tracking-widest uppercase border border-white/10 shadow-sm group">
             <svg className="w-4 h-4 flex-shrink-0 text-[#C84B11] group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

@@ -40,6 +40,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={`${outfit.variable} ${plusJakartaSans.variable} ${bebasNeue.variable} ${dmSerifDisplay.variable} font-body antialiased`}
     >
       <body

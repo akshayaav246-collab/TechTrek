@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useLocalToast } from '@/components/ui/Toast';
+import Image from 'next/image';
 
 type FreshUser = {
   _id: string; name: string; email: string; college: string;
@@ -13,9 +15,18 @@ type FreshUser = {
 type EventReg = {
   _id: string; status: string; qrCode?: string; checkedIn?: boolean; checkedInAt?: string;
   createdAt: string; hasSubmittedFeedback?: boolean; cancelledAt?: string; refundStatus?: string;
-  selectedDays?: number[]; totalAmountPaid?: number;
+  selectedDays?: number[]; totalAmountPaid?: number; seatNumber?: string | null;
   event: { eventId: string; name: string; collegeName: string; city: string; venue: string; dateTime: string; status: string; amount?: number };
 };
+
+type ErrorWithMessage = { message: string };
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return (error as ErrorWithMessage).message;
+  }
+  return fallback;
+}
 
 const statusColor = (s: string) => {
   if (s === 'REGISTERED') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
@@ -188,7 +199,7 @@ function CancelModal({
 }
 
 export default function ProfilePage() {
-  const { user: ctxUser, token, logout, isLoading: authLoading } = useAuth();
+  const { user: ctxUser, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [user, setUser] = useState<FreshUser | null>(null);
   const [registrations, setRegistrations] = useState<EventReg[]>([]);
@@ -209,6 +220,7 @@ export default function ProfilePage() {
   const [pwData, setPwData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwMsg, setPwMsg] = useState({ type: '', text: '' });
   const [pwLoading, setPwLoading] = useState(false);
+  const { showToast, ToastContainer } = useLocalToast();
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,8 +240,8 @@ export default function ProfilePage() {
       if (!res.ok) throw new Error(data.message);
       setPwMsg({ type: 'success', text: 'Password updated successfully!' });
       setPwData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (err: any) {
-      setPwMsg({ type: 'error', text: err.message });
+    } catch (err: unknown) {
+      setPwMsg({ type: 'error', text: getErrorMessage(err, 'Unable to update password.') });
     } finally {
       setPwLoading(false);
     }
@@ -328,8 +340,8 @@ export default function ProfilePage() {
       setFeedbackTarget(null);
       setFeedbackComment('');
       setFeedbackRating(5);
-    } catch (err: any) {
-      alert(err.message || 'Failed to submit feedback');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to submit feedback'), 'error');
     } finally {
       setSubmittingFeedback(false);
     }
@@ -339,9 +351,10 @@ export default function ProfilePage() {
     if (!cancelTarget || !token) return;
     setCancelling(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/registrations/${cancelTarget._id}/cancel`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch('http://localhost:5000/api/registration/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ registrationId: cancelTarget._id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Cancellation failed.');
@@ -353,8 +366,8 @@ export default function ProfilePage() {
       ));
       setCancelSuccess({ regId: cancelTarget._id, message: data.message });
       setCancelTarget(null);
-    } catch (err: any) {
-      alert(err.message || 'Cancellation failed. Please try again.');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Cancellation failed. Please try again.'), 'error');
     } finally {
       setCancelling(false);
     }
@@ -380,8 +393,6 @@ export default function ProfilePage() {
 
   const numTickets = registrations.filter(r => r.event).length;
   const numCerts = registrations.filter(r => r.event?.status === 'COMPLETED' && r.checkedIn && r.hasSubmittedFeedback).length;
-  const numAttended = registrations.filter(r => r.checkedIn && r.event).length;
-
   const validRegs = registrations.filter(r => r.event);
   const filteredRegs = activeTab === 'certs' 
     ? validRegs.filter(r => r.event.status === 'COMPLETED' && r.checkedIn && r.hasSubmittedFeedback)
@@ -389,6 +400,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background pt-4 pb-10 font-body lg:h-[calc(100vh-5rem)] lg:min-h-0 lg:overflow-hidden">
+      <ToastContainer />
 
       {/* ── Cancellation Policy Modal ── */}
       {cancelTarget && (
@@ -452,11 +464,14 @@ export default function ProfilePage() {
                 
                 <div className="mt-6 space-y-3.5">
                   {profileFields.map(({ label, value, Icon }) => (
-                    <div key={label} className="flex flex-col">
+                    <div key={label} className="flex items-start gap-2">
+                      <Icon />
+                      <div className="flex flex-col">
                       <p className="text-[11px] font-black uppercase tracking-widest text-secondary/50 mb-0.5">{label}</p>
                       <p className="text-[14px] font-bold text-secondary flex items-center gap-2">
                         {value || <span className="text-secondary/40 font-normal italic">Not set</span>}
                       </p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -527,7 +542,7 @@ export default function ProfilePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
                 </svg>
                 <h3 className="font-bold text-xl text-secondary mb-2">No items found</h3>
-                <p className="text-foreground/60 mb-6 text-sm">You dont have any {activeTab === 'certs' ? 'certificates' : 'tickets'} yet.</p>
+                <p className="text-foreground/60 mb-6 text-sm">You don&apos;t have any {activeTab === 'certs' ? 'certificates' : 'tickets'} yet.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -641,9 +656,13 @@ export default function ProfilePage() {
                         <div className="px-6 pb-6 bg-white border-t border-border flex flex-col items-center animate-[fadeIn_0.2s_ease-out]">
                           <p className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mt-4 mb-3">Your Event Pass</p>
                           <div className="bg-white p-2 rounded-2xl border-2 border-border shadow-sm mb-4">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={reg.qrCode} alt="QR Code" className="w-40 h-40 rounded-xl" />
+                            <Image src={reg.qrCode} alt="QR Code" width={160} height={160} unoptimized className="w-40 h-40 rounded-xl" />
                           </div>
+                          {reg.seatNumber && (
+                             <div className="mb-4 bg-primary/10 text-primary px-6 py-2 rounded-xl text-lg font-black tracking-widest border border-primary/20 shadow-sm">
+                               SEAT {reg.seatNumber}
+                             </div>
+                          )}
                           <button onClick={() => downloadQR(reg.qrCode!, evt.eventId)}
                             className="bg-secondary hover:bg-primary text-white transition-colors px-6 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-wider whitespace-nowrap">
                             Download Pass

@@ -4,15 +4,30 @@ import { Section } from "@/components/ui/Section";
 import { Input } from "@/components/ui/Input";
 import IndustryAwareness from "@/components/sections/IndustryAwareness";
 import Link from 'next/link';
+import Image from 'next/image';
+
+type EventSummary = {
+  eventId: string;
+  name: string;
+  dateTime: string;
+  status: string;
+};
+
+type FeaturedFeedback = {
+  studentName: string;
+  college: string;
+  comment: string;
+  eventName?: string;
+};
 
 async function getFirstUpcomingEvent() {
   try {
     const res = await fetch('http://localhost:5000/api/events', { next: { revalidate: 60 } });
     if (!res.ok) return null;
-    const events = await res.json();
+    const events: EventSummary[] = await res.json();
     const upcoming = events
-      .filter((e: { status: string }) => e.status === 'UPCOMING')
-      .sort((a: { dateTime: string }, b: { dateTime: string }) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+      .filter((e) => e.status === 'UPCOMING')
+      .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
     return upcoming[0] || null;
   } catch {
     return null;
@@ -23,7 +38,7 @@ async function getFeaturedFeedback() {
   try {
     const res = await fetch('http://localhost:5000/api/events/featured/feedback', { next: { revalidate: 60 } });
     if (!res.ok) return [];
-    return await res.json();
+    return await res.json() as FeaturedFeedback[];
   } catch {
     return [];
   }
@@ -44,10 +59,12 @@ export default async function Home() {
       <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden bg-secondary">
         {/* Background Image */}
         <div className="absolute inset-0 z-0 bg-secondary">
-          <img
+          <Image
             src="/redfort.png"
             alt="Red Fort Background"
-            className="absolute inset-0 w-full h-full object-cover object-center opacity-60"
+            fill
+            priority
+            className="absolute inset-0 object-cover object-center opacity-60"
           />
           <div className="absolute inset-0 bg-secondary/50"></div>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background"></div>
@@ -129,17 +146,18 @@ export default async function Home() {
           } as React.CSSProperties}
         >
           <div className="list">
-            {(featuredFeedback.length > 0 ? featuredFeedback.map((f: any) => ({
+            {(featuredFeedback.length > 0 ? featuredFeedback.map((f) => ({
               name: f.studentName,
               uni: f.college,
-              quote: f.comment
+              quote: f.comment,
+              eventName: f.eventName,
             })) : [
-              { name: "Rahul S.", uni: "IIT Delhi", quote: "TechTrek totally changed my perspective on the tech industry. I landed my first internship because of the networks I built here!" },
-              { name: "Priya M.", uni: "VIT Vellore", quote: "The hands-on workshops on Cloud Native architectures gave me the exact skills I needed to stand out in my interviews." },
-              { name: "Arjun K.", uni: "NIT Trichy", quote: "Meeting mentors from top enterprises was invaluable. The guidance I received helped me shape my career path in AI." },
-              { name: "Neha R.", uni: "KSRCE", quote: "An electrifying experience! The energy, the knowledge sharing, and the community are unmatched. A must-attend for tech enthusiasts." },
-              { name: "Vikram D.", uni: "BITS Pilani", quote: "I came for the cybersecurity talks and stayed for the incredible networking opportunities. Truly a flagship event." }
-            ]).map((item: { name: string, uni: string, quote: string }, index: number) => (
+              { name: "Rahul S.", uni: "IIT Delhi", quote: "TechTrek totally changed my perspective on the tech industry. I landed my first internship because of the networks I built here!", eventName: "AI Leadership Summit" },
+              { name: "Priya M.", uni: "VIT Vellore", quote: "The hands-on workshops on Cloud Native architectures gave me the exact skills I needed to stand out in my interviews.", eventName: "Cloud Futures Forum" },
+              { name: "Arjun K.", uni: "NIT Trichy", quote: "Meeting mentors from top enterprises was invaluable. The guidance I received helped me shape my career path in AI.", eventName: "Industry Awareness Summit" },
+              { name: "Neha R.", uni: "KSRCE", quote: "An electrifying experience! The energy, the knowledge sharing, and the community are unmatched. A must-attend for tech enthusiasts.", eventName: "TechTrek Chennai Edition" },
+              { name: "Vikram D.", uni: "BITS Pilani", quote: "I came for the cybersecurity talks and stayed for the incredible networking opportunities. Truly a flagship event.", eventName: "Cyber Resilience Forum" }
+            ]).map((item: { name: string, uni: string, quote: string, eventName?: string }, index: number) => (
               <div 
                 key={index} 
                 className="item p-4" 
@@ -155,7 +173,12 @@ export default async function Home() {
                       <span className="text-sm text-primary font-medium">{item.uni}</span>
                     </div>
                   </div>
-                  <p className="italic text-white/80 leading-snug text-base font-light overflow-hidden text-ellipsis line-clamp-4">"{item.quote}"</p>
+                  {item.eventName && (
+                    <p className="mb-3 inline-flex w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/70">
+                      {item.eventName}
+                    </p>
+                  )}
+                  <p className="italic text-white/80 leading-snug text-base font-light overflow-hidden text-ellipsis line-clamp-4">&quot;{item.quote}&quot;</p>
                 </Card>
               </div>
             ))}

@@ -10,13 +10,23 @@ interface Props {
 }
 
 function Countdown({ expiresAt }: { expiresAt: string }) {
-  const [seconds, setSeconds] = useState(0);
+  const calcSeconds = useCallback(
+    () => Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)),
+    [expiresAt]
+  );
+  const [seconds, setSeconds] = useState(calcSeconds);
+
   useEffect(() => {
-    const calc = () => Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
-    setSeconds(calc());
-    const id = setInterval(() => setSeconds(c => { const n = calc(); if (n <= 0) clearInterval(id); return n; }), 1000);
+    const id = setInterval(() => {
+      setSeconds(() => {
+        const nextSeconds = calcSeconds();
+        if (nextSeconds <= 0) clearInterval(id);
+        return nextSeconds;
+      });
+    }, 1000);
     return () => clearInterval(id);
-  }, [expiresAt]);
+  }, [calcSeconds]);
+
   const m = Math.floor(seconds / 60), s = seconds % 60;
   return <span className="font-mono text-amber-700 font-bold">{m}:{String(s).padStart(2,'0')}</span>;
 }

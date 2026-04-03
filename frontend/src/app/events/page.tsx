@@ -193,7 +193,7 @@ export default function EventsPage() {
               <svg className="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
             <h3 className="text-xl font-extrabold text-[#0E1B3D] mb-2 font-heading">No events found</h3>
-            <p className="text-[#0E1B3D]/60 text-sm font-medium max-w-sm mx-auto">Try adjusting your search terms or filters to find what you're looking for.</p>
+            <p className="text-[#0E1B3D]/60 text-sm font-medium max-w-sm mx-auto">Try adjusting your search terms or filters to find what you&apos;re looking for.</p>
             <button 
               onClick={() => { setSearchTerm(''); setCityFilter('ALL'); setStatusFilter('ALL'); }}
               className="mt-6 text-[#e8631a] font-bold text-sm hover:underline"

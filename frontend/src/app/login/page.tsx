@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, Suspense } from 'react';
 import ReactDOM from 'react-dom';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -46,6 +45,14 @@ function Field({
 
 // ─── College Selector (event-driven from DB) ───────────────────────────
 interface EventCollege { collegeName: string; city: string; collegeDomain: string; }
+type ErrorWithMessage = { message: string };
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return (error as ErrorWithMessage).message;
+  }
+  return fallback;
+}
 
 function CollegeInput({ value, onChange }: {
   value: string;
@@ -59,9 +66,6 @@ function CollegeInput({ value, onChange }: {
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
 
   // Fetch event colleges on mount
   useEffect(() => {
@@ -133,7 +137,7 @@ function CollegeInput({ value, onChange }: {
   };
 
   // Portal dropdown
-  const dropdown = mounted && open && filtered.length > 0
+  const dropdown = typeof window !== 'undefined' && open && filtered.length > 0
     ? ReactDOM.createPortal(
         <div
           style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
@@ -246,7 +250,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
       if (!res.ok) throw new Error(data.message);
       setResetToken(data.resetToken);
       setStep('reset');
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(getErrorMessage(err, 'Unable to verify OTP.')); }
     finally { setLoading(false); }
   };
 
@@ -264,7 +268,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       setStep('done');
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(getErrorMessage(err, 'Unable to reset password.')); }
     finally { setLoading(false); }
   };
 
@@ -438,7 +442,7 @@ function BrandPanel() {
           <div className="w-12 h-[2px] bg-gradient-to-r from-[#e8631a] to-transparent my-6" />
 
           <p className="text-[16px] font-light leading-[1.7] text-white/60 max-w-md">
-            Access exclusive summits, meet the leaders shaping India's tech future, and build your career from Day 1.
+            Access exclusive summits, meet the leaders shaping India&apos;s tech future, and build your career from Day 1.
           </p>
 
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#e8631a]/10 border border-[#e8631a]/25 rounded-full mt-8">
@@ -480,7 +484,7 @@ function BrandPanel() {
         <div className="flex items-center justify-between mt-12 mb-6 w-full">
           <span className="text-[12px] text-white/20 tracking-wider">© 2026 Global Knowledge Technologies</span>
           <div className="flex items-center gap-2 px-3 py-1.5 border border-[#d4a843]/20 rounded-full text-[#d4a843]/70 text-[11px] tracking-wider">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#d4a843] animate-pulse"></span> Empowering India's Next Generation
+            <span className="w-1.5 h-1.5 rounded-full bg-[#d4a843] animate-pulse"></span> Empowering India&apos;s Next Generation
           </div>
         </div>
       </div>
@@ -499,6 +503,7 @@ function AuthForms() {
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -549,7 +554,7 @@ function AuthForms() {
       if (data.role === 'superAdmin') router.push('/superadmin');
       else if (data.role === 'admin') router.push('/admin');
       else router.push(redirect);
-    } catch (err: any) { setFormError(err.message); }
+    } catch (err: unknown) { setFormError(getErrorMessage(err, 'Login failed')); }
     finally { setLoading(false); }
   };
 
@@ -568,12 +573,12 @@ function AuthForms() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Signup failed');
       
-      alert('Account created successfully! Please sign in to continue.');
+      setSignupSuccess(true);
       setLoginData({ email: signupData.email, password: '' });
       setTab('login');
       setSignupData({ name: '', email: '', phone: '', college: '', year: '1', discipline: '', password: '' });
       
-    } catch (err: any) { setFormError(err.message); }
+    } catch (err: unknown) { setFormError(getErrorMessage(err, 'Signup failed')); }
     finally { setLoading(false); }
   };
 
@@ -618,6 +623,13 @@ function AuthForms() {
                 </button>
               ))}
             </div>
+
+            {/* Success banner after signup */}
+            {signupSuccess && tab === 'login' && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 mb-5 text-sm font-medium flex items-start gap-2">
+                <span className="mt-0.5">✅</span> Account created successfully! Please sign in to continue.
+              </div>
+            )}
 
             {/* Error banner */}
             {formError && (
@@ -668,7 +680,7 @@ function AuthForms() {
                 </div>
 
                 <p className="text-center text-[13.5px] text-[#8a7f6e]">
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <button type="button" onClick={() => setTab('signup')} className="text-[#e8631a] font-semibold hover:opacity-75 transition-opacity">
                     Create one free
                   </button>

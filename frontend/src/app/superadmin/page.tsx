@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 type Admin = { _id: string; name: string; email: string; isActive: boolean; createdAt: string };
 type Analytics = {
@@ -20,7 +19,7 @@ const StatCard = ({ label, value, sub, color }: { label: string; value: number |
 );
 
 export default function SuperAdminPage() {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, isLoading } = useAuth();
   const router = useRouter();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [admins, setAdmins] = useState<Admin[]>([]);
@@ -28,8 +27,10 @@ export default function SuperAdminPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState({ text: '', err: false });
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user || !token) { router.push('/login'); return; }
     if (user.role !== 'superAdmin') { router.push('/'); return; }
     const h = { Authorization: `Bearer ${token}` };
@@ -37,7 +38,7 @@ export default function SuperAdminPage() {
       fetch('http://localhost:5000/api/superadmin/analytics', { headers: h }).then(r => r.json()),
       fetch('http://localhost:5000/api/superadmin/admins', { headers: h }).then(r => r.json()),
     ]).then(([a, ad]) => { setAnalytics(a); setAdmins(Array.isArray(ad) ? ad : []); });
-  }, [user, token, router]);
+  }, [user, token, isLoading, router]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setCreating(true); setMsg({ text: '', err: false });
@@ -56,8 +57,13 @@ export default function SuperAdminPage() {
     finally { setCreating(false); }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete admin "${name}"?`)) return;
+  const handleDelete = async (id: string) => {
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      setTimeout(() => setConfirmDeleteId(null), 4000);
+      return;
+    }
+    setConfirmDeleteId(null);
     const res = await fetch(`http://localhost:5000/api/superadmin/admins/${id}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     });
@@ -72,6 +78,7 @@ export default function SuperAdminPage() {
     if (res.ok) setAdmins(prev => prev.map(a => a._id === id ? { ...a, isActive: data.isActive } : a));
   };
 
+  if (isLoading) return null;
   if (!user || user.role !== 'superAdmin') return null;
 
   return (
@@ -186,9 +193,13 @@ export default function SuperAdminPage() {
                     className="text-xs font-bold text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
                     {admin.isActive ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button onClick={() => handleDelete(admin._id, admin.name)}
-                    className="text-xs font-bold text-red-600 hover:text-red-800 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
-                    Delete
+                  <button onClick={() => handleDelete(admin._id)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                      confirmDeleteId === admin._id
+                        ? 'bg-red-100 text-red-800 animate-pulse'
+                        : 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                    }`}>
+                    {confirmDeleteId === admin._id ? 'Confirm Delete?' : 'Delete'}
                   </button>
                 </div>
               </div>

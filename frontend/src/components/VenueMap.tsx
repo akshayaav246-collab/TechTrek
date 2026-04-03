@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 
 export interface HallLayoutData {
   _id?: string;
@@ -35,6 +35,44 @@ interface Props {
   seatStatuses?: SeatStatus[];
   onSeatClick?: (seatId: string) => void;
   mySeatId?: string | null;
+}
+
+function StageBar() {
+  return (
+    <div className="flex items-center justify-center w-full my-3">
+      <div className="flex-1 h-px bg-gray-200"/>
+      <div
+        className="px-6 py-2 rounded-lg mx-3 text-xs font-extrabold tracking-widest uppercase"
+        style={{ background: '#e8631a', color: '#fff' }}
+      >
+        STAGE
+      </div>
+      <div className="flex-1 h-px bg-gray-200"/>
+    </div>
+  );
+}
+
+function EntryExitRow({ entryPoints }: { entryPoints: HallLayoutData['entry_points'] }) {
+  return (
+    <div className="flex items-center justify-between w-full mt-2 px-2">
+      {(entryPoints === 'left' || entryPoints === 'both') ? (
+        <div className="flex items-center gap-1 text-emerald-600 text-[10px] font-bold uppercase tracking-widest">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+          </svg>
+          Entry
+        </div>
+      ) : <div/>}
+      {(entryPoints === 'right' || entryPoints === 'both') ? (
+        <div className="flex items-center gap-1 text-red-500 text-[10px] font-bold uppercase tracking-widest">
+          Exit
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+          </svg>
+        </div>
+      ) : <div/>}
+    </div>
+  );
 }
 
 export default function VenueMap({
@@ -85,82 +123,6 @@ export default function VenueMap({
   const textSize = compact ? '10px' : '12px';
   const gap = compact ? 3 : 4;
 
-  const StageBar = () => (
-    <div className="flex items-center justify-center w-full my-3">
-      <div className="flex-1 h-px bg-gray-200"/>
-      <div className="px-6 py-2 rounded-lg mx-3 text-xs font-extrabold tracking-widest uppercase"
-        style={{ background: '#e8631a', color: '#fff' }}>⬛ STAGE</div>
-      <div className="flex-1 h-px bg-gray-200"/>
-    </div>
-  );
-
-  const EntryExitRow = () => (
-    <div className="flex items-center justify-between w-full mt-2 px-2">
-      {(entry_points === 'left' || entry_points === 'both') ? (
-        <div className="flex items-center gap-1 text-emerald-600 text-[10px] font-bold uppercase tracking-widest">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
-          </svg> Entry
-        </div>
-      ) : <div/>}
-      {(entry_points === 'right' || entry_points === 'both') ? (
-        <div className="flex items-center gap-1 text-red-500 text-[10px] font-bold uppercase tracking-widest">
-          Exit <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/>
-          </svg>
-        </div>
-      ) : <div/>}
-    </div>
-  );
-
-  const SeatGrid = () => (
-    <div className="overflow-x-auto">
-      <div className="inline-flex flex-col min-w-max" style={{ gap }}>
-        {Array.from({ length: total_rows }, (_, ri) => {
-          const rowLabel = getRowLabel(ri);
-          const isVip = reservedSet.has(rowLabel);
-          return (
-            <div key={rowLabel} className="flex items-center" style={{ gap }}>
-              {/* Row label left */}
-              <div className="w-8 shrink-0 flex items-center justify-end gap-1 pr-1">
-                <span className="text-[10px] font-bold text-gray-400">{rowLabel}</span>
-                {isVip && <span className="text-[7px] font-extrabold px-1 rounded" style={{ background: '#e8631a', color: '#fff' }}>VIP</span>}
-              </div>
-              {/* Seats */}
-              {Array.from({ length: seats_per_row }, (_, si) => {
-                const seatNum = si + 1;
-                const seatId = `${rowLabel}${seatNum}`;
-                const style = getSeatStyle(rowLabel, seatNum, isVip);
-                const clickable = canClick(rowLabel, seatNum);
-                return (
-                  <React.Fragment key={si}>
-                    <div
-                      title={seatId}
-                      onClick={() => clickable && onSeatClick?.(seatId)}
-                      className={`rounded-sm flex items-center justify-center font-bold border transition-all select-none ${style.pulse ? 'animate-pulse' : ''} ${clickable ? 'hover:scale-110 hover:shadow-sm' : ''}`}
-                      style={{
-                        width: seatSize, height: seatSize,
-                        background: style.bg, borderColor: style.border,
-                        color: style.color, cursor: style.cursor,
-                        fontSize: textSize,
-                      }}>
-                      {!compact && seatNum}
-                    </div>
-                    {aisleSet.has(seatNum) && <div style={{ width: compact ? 10 : 14 }} className="shrink-0"/>}
-                  </React.Fragment>
-                );
-              })}
-              {/* Row label right */}
-              <div className="w-5 shrink-0 pl-1">
-                <span className="text-[10px] font-bold text-gray-400">{rowLabel}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       {/* Legend */}
@@ -174,15 +136,60 @@ export default function VenueMap({
         <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded-sm border border-[#e8631a]" style={{background:'rgba(232,131,26,0.15)'}}/> VIP</div>
       </div>
 
-      {stage_position === 'front' && <StageBar/>}
-      {stage_position === 'back' && <EntryExitRow/>}
+      {stage_position === 'front' && <StageBar />}
+      {stage_position === 'back' && <EntryExitRow entryPoints={entry_points} />}
 
       <div className="flex justify-center mt-2">
-        <SeatGrid/>
+        <div className="overflow-x-auto">
+          <div className="inline-flex flex-col min-w-max" style={{ gap }}>
+            {Array.from({ length: total_rows }, (_, ri) => {
+              const rowLabel = getRowLabel(ri);
+              const isVip = reservedSet.has(rowLabel);
+              return (
+                <div key={rowLabel} className="flex items-center" style={{ gap }}>
+                  <div className="w-8 shrink-0 flex items-center justify-end gap-1 pr-1">
+                    <span className="text-[10px] font-bold text-gray-400">{rowLabel}</span>
+                    {isVip && <span className="text-[7px] font-extrabold px-1 rounded" style={{ background: '#e8631a', color: '#fff' }}>VIP</span>}
+                  </div>
+                  {Array.from({ length: seats_per_row }, (_, si) => {
+                    const seatNum = si + 1;
+                    const seatId = `${rowLabel}${seatNum}`;
+                    const style = getSeatStyle(rowLabel, seatNum, isVip);
+                    const clickable = canClick(rowLabel, seatNum);
+                    return (
+                      <React.Fragment key={seatId}>
+                        <div
+                          title={seatId}
+                          onClick={() => clickable && onSeatClick?.(seatId)}
+                          className={`rounded-sm flex items-center justify-center font-bold border transition-all select-none ${style.pulse ? 'animate-pulse' : ''} ${clickable ? 'hover:scale-110 hover:shadow-sm' : ''}`}
+                          style={{
+                            width: seatSize,
+                            height: seatSize,
+                            background: style.bg,
+                            borderColor: style.border,
+                            color: style.color,
+                            cursor: style.cursor,
+                            fontSize: textSize,
+                          }}
+                        >
+                          {!compact && seatNum}
+                        </div>
+                        {aisleSet.has(seatNum) && <div style={{ width: compact ? 10 : 14 }} className="shrink-0"/>}
+                      </React.Fragment>
+                    );
+                  })}
+                  <div className="w-5 shrink-0 pl-1">
+                    <span className="text-[10px] font-bold text-gray-400">{rowLabel}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {stage_position === 'back' && <StageBar/>}
-      {stage_position === 'front' && <EntryExitRow/>}
+      {stage_position === 'back' && <StageBar />}
+      {stage_position === 'front' && <EntryExitRow entryPoints={entry_points} />}
     </div>
   );
 }
