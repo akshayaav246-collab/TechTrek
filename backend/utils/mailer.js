@@ -46,7 +46,7 @@ const sendRegistrationEmail = async ({ name, email, eventName, venue, dateTime, 
   });
 
   // Strip "data:image/png;base64," prefix for attachment
-  const base64Data = qrCodeBase64.replace(/^data:image\/png;base64,/, '');
+  const base64Data = qrCodeBase64 ? qrCodeBase64.replace(/^data:image\/png;base64,/, '') : '';
 
   await transporter.sendMail({
     from: `"TechTrek" <${process.env.EMAIL_USER}>`,
@@ -90,6 +90,72 @@ const sendRegistrationEmail = async ({ name, email, eventName, venue, dateTime, 
       }
     ]
   });
+};
+
+const sendCancellationEmail = async ({ name, email, eventName }) => {
+  await transporter.sendMail({
+    from: `"TechTrek" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Registration Cancelled: ${eventName}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#FAF8F4;border-radius:16px;overflow:hidden;">
+        <div style="background:#0E1B3D;padding:40px;text-align:center;">
+          <h1 style="color:#E8831A;margin:0;font-size:32px;">TechTrek</h1>
+          <p style="color:rgba(255,255,255,0.6);margin:8px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:2px;">Registration Update</p>
+        </div>
+        <div style="padding:40px;">
+          <h2 style="color:#0E1B3D;">Hi ${name},</h2>
+          <p style="color:#555;line-height:1.7;">Your registration for <strong>${eventName}</strong> has been cancelled.</p>
+          <p style="color:#555;line-height:1.7;">If this was not expected, please contact the event admin team.</p>
+        </div>
+      </div>
+    `,
+  });
+};
+
+const sendWaitlistPromotionEmail = async ({ name, email, eventName, signInLink, paymentLink, qrCodeBase64 }) => {
+  const base64Data = qrCodeBase64 ? qrCodeBase64.replace(/^data:image\/png;base64,/, '') : '';
+
+  await transporter.sendMail({
+    from: `"TechTrek" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Seat Available: ${eventName}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#FAF8F4;border-radius:16px;overflow:hidden;">
+        <div style="background:#0E1B3D;padding:40px;text-align:center;">
+          <h1 style="color:#E8831A;margin:0;font-size:32px;">TechTrek</h1>
+          <p style="color:rgba(255,255,255,0.6);margin:8px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:2px;">Waitlist Promotion</p>
+        </div>
+        <div style="padding:40px;">
+          <h2 style="color:#0E1B3D;">Good news, ${name}!</h2>
+          <p style="color:#555;line-height:1.7;">A seat is now available for <strong>${eventName}</strong>.</p>
+          <p style="color:#555;line-height:1.7;">Please sign in and complete your payment to confirm the seat.</p>
+          <div style="margin:24px 0;display:flex;gap:12px;flex-wrap:wrap;">
+            <a href="${signInLink}" style="display:inline-block;background:#0E1B3D;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:bold;">Sign In</a>
+            <a href="${paymentLink}" style="display:inline-block;background:#E8831A;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:bold;">Seat Available and Pay for It</a>
+          </div>
+          ${qrCodeBase64 ? `
+            <div style="text-align:center;margin-top:24px;">
+              <img src="cid:promoted_qr_code" alt="Promoted registration QR" style="width:200px;height:200px;border:4px solid #0E1B3D;border-radius:12px;"/>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `,
+    attachments: qrCodeBase64 ? [
+      {
+        filename: 'techtrek-promoted-qr.png',
+        content: base64Data,
+        encoding: 'base64',
+        cid: 'promoted_qr_code',
+      }
+    ] : [],
+  });
+};
+
+const sendSmsNotification = async ({ phone, message }) => {
+  if (!phone || !message) return;
+  console.log(`SMS trigger queued for ${phone}: ${message}`);
 };
 
 /**
@@ -152,4 +218,12 @@ const sendSeatReminderEmail = async ({ name, email, seatId, eventName }) => {
   });
 };
 
-module.exports = { sendWelcomeEmail, sendRegistrationEmail, sendOtpEmail, sendSeatReminderEmail };
+module.exports = {
+  sendWelcomeEmail,
+  sendRegistrationEmail,
+  sendCancellationEmail,
+  sendWaitlistPromotionEmail,
+  sendOtpEmail,
+  sendSeatReminderEmail,
+  sendSmsNotification,
+};

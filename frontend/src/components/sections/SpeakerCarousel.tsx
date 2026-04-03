@@ -19,72 +19,61 @@ function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-const SPEAKERS = [
-  {
-    initials: "RS",
-    name: "Rohit Sharma",
-    title: "VP Strategy, Infosys",
-    tags: ["#TechIndustry", "#AI"],
-    headline: "\"India's $1T Tech Dream: What It Means for the Class of 2026\"",
-    description: "A deep dive into how generative AI and cloud infrastructure will reshape entry-level careers.",
-    date: "Mar 12, 10:00 AM",
-    duration: "45 mins"
-  },
-  {
-    initials: "PK",
-    name: "Priya Krishnan",
-    title: "Founder, GreenLeaf Ventures",
-    tags: ["#GreenEnergy", "#Startups"],
-    headline: "\"Climate Tech is the New Software: Building Green in Bharat\"",
-    description: "Why the next wave of unicorn startups will focus on sustainability and renewable resources.",
-    date: "Mar 12, 11:30 AM",
-    duration: "30 mins"
-  },
-  {
-    initials: "AM",
-    name: "Arjun Mehta",
-    title: "Head of FinTech, HDFC Bank",
-    tags: ["#FinTech", "#UPI"],
-    headline: "\"From UPI to Neo-Banks: Cracking the Next Decade of Money\"",
-    description: "Understanding the architecture behind India's digital payment revolution and future projections.",
-    date: "Mar 12, 02:00 PM",
-    duration: "60 mins"
-  },
-  {
-    initials: "SV",
-    name: "Sneha Varma",
-    title: "Lead AI Engineer, Google",
-    tags: ["#AI", "#MachineLearning"],
-    headline: "\"Beyond Pattern Matching: The Frontier of Reasoning Logic in AI\"",
-    description: "Exploring the next steps of fundamental AGI architecture and prompt logic breakthroughs.",
-    date: "Mar 13, 10:30 AM",
-    duration: "40 mins"
-  },
-  {
-    initials: "MK",
-    name: "Manoj Kumar",
-    title: "CISO, CyberTech India",
-    tags: ["#Cybersecurity", "#Infosec"],
-    headline: "\"Zero Trust Architecture in a Decentralized Remote Workforce\"",
-    description: "How modern security infrastructure is fundamentally adapting to distributed engineering teams.",
-    date: "Mar 13, 01:00 PM",
-    duration: "35 mins"
-  },
-  {
-    initials: "AD",
-    name: "Anjali Desai",
-    title: "VP Product, Zomato",
-    tags: ["#ProductManagement", "#UX"],
-    headline: "\"Psychology of Scale: Building UX for the Next Billion Users\"",
-    description: "Learning interaction design that organically bridges language barriers across emerging markets.",
-    date: "Mar 14, 09:30 AM",
-    duration: "50 mins"
-  }
-];
+type LandingSpeakerCard = {
+  initials: string;
+  name: string;
+  title: string;
+  tags: string[];
+  headline: string;
+  description: string;
+  date: string;
+  duration: string;
+};
 
-export function SpeakerCarousel() {
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function inferRoleTags(role: string) {
+  const lower = role.toLowerCase();
+  const rules: Array<{ match: string[]; tag: string }> = [
+    { match: ['artificial intelligence', 'ai'], tag: '#AI' },
+    { match: ['machine learning', 'ml'], tag: '#MachineLearning' },
+    { match: ['data scientist', 'data science', 'data engineer'], tag: '#Data' },
+    { match: ['cyber', 'security', 'ciso', 'infosec'], tag: '#Cybersecurity' },
+    { match: ['cloud', 'devops', 'platform'], tag: '#Cloud' },
+    { match: ['fintech', 'payments', 'upi'], tag: '#FinTech' },
+    { match: ['product'], tag: '#Product' },
+    { match: ['design', 'ux', 'ui'], tag: '#Design' },
+    { match: ['founder', 'co-founder'], tag: '#Startups' },
+    { match: ['strategy'], tag: '#Strategy' },
+    { match: ['quantum'], tag: '#Quantum' },
+    { match: ['robotics'], tag: '#Robotics' },
+    { match: ['iot'], tag: '#IoT' },
+    { match: ['engineer', 'engineering'], tag: '#Engineering' },
+  ];
+
+  const tags = rules
+    .filter(rule => rule.match.some(keyword => lower.includes(keyword)))
+    .map(rule => rule.tag);
+
+  const unique = Array.from(new Set(tags));
+  if (unique.length > 0) return unique.slice(0, 2);
+
+  return role
+    .split(/[\s,/&-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(word => `#${word.replace(/[^a-z0-9]/gi, '')}`);
+}
+
+export function SpeakerCarousel({ speakers }: { speakers: LandingSpeakerCard[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-
   const [cardsToShow, setCardsToShow] = useState(3);
 
   useEffect(() => {
@@ -98,27 +87,24 @@ export function SpeakerCarousel() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const maxIndex = Math.max(0, SPEAKERS.length - cardsToShow);
+  if (speakers.length === 0) return null;
 
-  useEffect(() => {
-    if (currentIndex > maxIndex) {
-      setCurrentIndex(maxIndex);
-    }
-  }, [maxIndex, currentIndex]);
+  const maxIndex = Math.max(0, speakers.length - cardsToShow);
+  const safeCurrentIndex = Math.min(currentIndex, maxIndex);
 
   const handleNext = () => {
-    if (currentIndex < maxIndex) setCurrentIndex(prev => prev + 1);
+    if (safeCurrentIndex < maxIndex) setCurrentIndex(prev => prev + 1);
   };
 
   const handlePrev = () => {
-    if (currentIndex > 0) setCurrentIndex(prev => prev - 1);
+    if (safeCurrentIndex > 0) setCurrentIndex(prev => prev - 1);
   };
 
   return (
     <div className="relative group w-full px-8 md:px-10 lg:px-24">
       
       {/* Left Arrow */}
-      {currentIndex > 0 && (
+      {safeCurrentIndex > 0 && (
         <button 
           onClick={handlePrev}
           className="absolute left-0 md:left-2 lg:left-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 md:w-10 lg:w-12 md:h-10 lg:h-12 flex items-center justify-center rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -136,15 +122,15 @@ export function SpeakerCarousel() {
         <div 
           className="flex transition-transform duration-500 ease-in-out"
           style={{ 
-            width: `${(SPEAKERS.length * 100) / cardsToShow}%`, 
-            transform: `translateX(-${currentIndex * (100 / SPEAKERS.length)}%)` 
+            width: `${(speakers.length * 100) / cardsToShow}%`, 
+            transform: `translateX(-${safeCurrentIndex * (100 / speakers.length)}%)` 
           }}
         >
-          {SPEAKERS.map((speaker, idx) => (
+          {speakers.map((speaker, idx) => (
             <div 
-              key={idx} 
+              key={`${speaker.name}-${speaker.headline}-${idx}`} 
               className="flex-shrink-0 px-4"
-              style={{ width: `${100 / SPEAKERS.length}%` }}
+              style={{ width: `${100 / speakers.length}%` }}
             >
               <div className="flex flex-col h-full rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border border-border group/card bg-card">
                 <div className="bg-secondary/95 p-6 flex flex-col items-center justify-center text-center relative overflow-hidden h-36 md:h-40 shrink-0">
@@ -183,7 +169,7 @@ export function SpeakerCarousel() {
       </div>
 
       {/* Right Arrow */}
-      {currentIndex < maxIndex && (
+      {safeCurrentIndex < maxIndex && (
         <button 
           onClick={handleNext}
           className="absolute right-0 md:right-2 lg:right-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 md:w-10 lg:w-12 md:h-10 lg:h-12 flex items-center justify-center rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -198,3 +184,5 @@ export function SpeakerCarousel() {
     </div>
   );
 }
+
+export { getInitials, inferRoleTags };

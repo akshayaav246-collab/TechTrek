@@ -13,6 +13,7 @@ type LayoutFormState = Omit<HallLayoutData, 'total_rows' | 'seats_per_row'> & { 
 type SpeakerForm = { name: string; role: string; company: string; bio: string };
 type AgendaItemForm = { time: string; title: string; duration: string; speaker: string };
 type DayAgendaForm = { day: number; label: string; agenda: AgendaItemForm[] };
+type TimeOption = { value: string; label: string; duration: string };
 const STEPS = ['Basic Info', 'Speakers', 'Schedule', 'Hall Layout', 'Review'];
 
 const defaultLayout: LayoutFormState = {
@@ -23,7 +24,7 @@ const defaultLayout: LayoutFormState = {
 
 const defaultForm = {
   name: '', collegeName: '', collegeDomain: '', city: '', venue: '',
-  dateTime: '', endDateTime: '', capacity: '', description: '', topics: '', amount: '',
+  dateTime: '', endDateTime: '', capacity: '', description: '', topics: '', amount: '500',
   speakers: [{ name: '', role: '', company: '', bio: '' }] as SpeakerForm[],
   agenda: [{ time: '', title: '', duration: '', speaker: '' }] as AgendaItemForm[],
   // Multi-day: array of days, each with their own agenda
@@ -33,6 +34,76 @@ const defaultForm = {
 const formFieldClassName = "w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors";
 const compactFormFieldClassName = "bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors";
 const fieldLabelClassName = "block text-[11px] font-bold uppercase tracking-[0.18em] text-[#6F665C] mb-2";
+
+function parseLocalDateTime(value: string) {
+  if (!value) return null;
+  const [datePart, timePart] = value.split('T');
+  if (!datePart || !timePart) return null;
+
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+  if ([year, month, day, hour, minute].some(Number.isNaN)) return null;
+
+  return new Date(year, month - 1, day, hour, minute);
+}
+
+function isSameCalendarDay(start: Date | null, end: Date | null) {
+  if (!start || !end) return false;
+  return (
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === end.getMonth() &&
+    start.getDate() === end.getDate()
+  );
+}
+
+function formatTimeLabel(date: Date) {
+  return date.toLocaleTimeString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function buildTimeOptions(startValue: string, endValue: string) {
+  const start = parseLocalDateTime(startValue);
+  if (!start) return [] as TimeOption[];
+
+  const rawEnd = parseLocalDateTime(endValue);
+  const singleDayEnd = rawEnd && isSameCalendarDay(start, rawEnd) && rawEnd > start
+    ? rawEnd
+    : new Date(start.getTime() + 8 * 60 * 60 * 1000);
+
+  const options: TimeOption[] = [];
+  let current = new Date(start);
+
+  while (current < singleDayEnd) {
+    const next = new Date(Math.min(current.getTime() + 15 * 60 * 1000, singleDayEnd.getTime()));
+    const durationMinutes = Math.max(15, Math.round((next.getTime() - current.getTime()) / 60000));
+    options.push({
+      value: formatTimeLabel(current),
+      label: formatTimeLabel(current),
+      duration: `${durationMinutes} mins`,
+    });
+    current = new Date(current.getTime() + 15 * 60 * 1000);
+  }
+
+  return options;
+}
+
+function splitTimeRange(value: string) {
+  const parts = value.split(' - ').map(part => part.trim());
+  if (parts.length === 2) {
+    return { start: parts[0], end: parts[1] };
+  }
+  return { start: value, end: '' };
+}
+
+function getDurationFromRange(start: string, end: string, options: TimeOption[]) {
+  const startIndex = options.findIndex(option => option.value === start);
+  const endIndex = options.findIndex(option => option.value === end);
+  if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) return '';
+  return `${(endIndex - startIndex) * 15} mins`;
+}
 
 // Defined OUTSIDE the page component to prevent remount on every keystroke
 function FormInput({ label, type = 'text', placeholder = '', value, onChange }: {
@@ -49,7 +120,7 @@ function FormInput({ label, type = 'text', placeholder = '', value, onChange }: 
 }
 
 export default function CreateEventPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState(defaultForm);
@@ -68,6 +139,10 @@ export default function CreateEventPage() {
         .then(r => r.json()).then(setSavedHalls).catch(() => {});
     }
   }, [step, token]);
+
+  if (isLoading) {
+    return null;
+  }
 
   if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">Access Denied</div>;
@@ -119,7 +194,11 @@ export default function CreateEventPage() {
     });
   };
   const setAgenda = (i: number, key: string, val: string) => {
-    const u = [...form.agenda]; u[i] = { ...u[i], [key]: val }; setForm(p => ({ ...p, agenda: u }));
+    setForm(prev => {
+      const agenda = [...prev.agenda];
+      agenda[i] = { ...agenda[i], [key]: val };
+      return { ...prev, agenda };
+    });
   };
   const addSpeaker = () => setForm(p => ({ ...p, speakers: [...p.speakers, { name: '', role: '', company: '', bio: '' }] }));
   const addAgenda = () => setForm(p => ({ ...p, agenda: [...p.agenda, { time: '', title: '', duration: '', speaker: '' }] }));
@@ -136,7 +215,10 @@ export default function CreateEventPage() {
   });
 
   // Multi-day helpers
-  const isMultiDay = !!form.endDateTime;
+  const startDate = parseLocalDateTime(form.dateTime);
+  const endDate = parseLocalDateTime(form.endDateTime);
+  const isMultiDay = !!startDate && !!endDate && !isSameCalendarDay(startDate, endDate) && endDate > startDate;
+  const agendaTimeOptions = buildTimeOptions(form.dateTime, form.endDateTime);
   const addDay = () => setForm(p => ({
     ...p,
     days: [...p.days, { day: p.days.length + 1, label: `Day ${p.days.length + 1}`, agenda: [{ time: '', title: '', duration: '', speaker: '' }] }],
@@ -168,6 +250,38 @@ export default function CreateEventPage() {
     days[dayIdx] = { ...days[dayIdx], agenda };
     return { ...prev, days };
   });
+  const setAgendaRange = (i: number, part: 'start' | 'end', value: string) => {
+    setForm(prev => {
+      const agenda = [...prev.agenda];
+      const current = agenda[i];
+      const range = splitTimeRange(current.time);
+      const nextRange = { ...range, [part]: value };
+      const duration = getDurationFromRange(nextRange.start, nextRange.end, agendaTimeOptions);
+      agenda[i] = {
+        ...current,
+        time: nextRange.start && nextRange.end ? `${nextRange.start} - ${nextRange.end}` : nextRange.start || nextRange.end,
+        duration,
+      };
+      return { ...prev, agenda };
+    });
+  };
+  const setDayAgendaRange = (dayIdx: number, agendaIdx: number, part: 'start' | 'end', value: string) => {
+    setForm(prev => {
+      const days = [...prev.days];
+      const agenda = [...days[dayIdx].agenda];
+      const current = agenda[agendaIdx];
+      const range = splitTimeRange(current.time);
+      const nextRange = { ...range, [part]: value };
+      const duration = getDurationFromRange(nextRange.start, nextRange.end, agendaTimeOptions);
+      agenda[agendaIdx] = {
+        ...current,
+        time: nextRange.start && nextRange.end ? `${nextRange.start} - ${nextRange.end}` : nextRange.start || nextRange.end,
+        duration,
+      };
+      days[dayIdx] = { ...days[dayIdx], agenda };
+      return { ...prev, days };
+    });
+  };
   const persistSpeakers = async () => {
     if (!token) return true;
     const speakersToSave = form.speakers.filter(speaker => speaker.name.trim());
@@ -392,6 +506,11 @@ export default function CreateEventPage() {
                       className={formFieldClassName} />
                   </div>
                 </div>
+                {form.dateTime && form.endDateTime && isSameCalendarDay(startDate, endDate) && (
+                  <p className="text-xs text-[#6F665C]">
+                    Matching start and end dates will be treated as a 1-day event. Agenda time slots below use that single-day window.
+                  </p>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormInput label="Total Capacity *" type="number" value={form.capacity} onChange={v => set('capacity', v)} placeholder="500" />
                   <div>
@@ -407,11 +526,24 @@ export default function CreateEventPage() {
                 {!isMultiDay && (
                   <div className="bg-[#F2EBE0] border border-[#E2D8CC] rounded-2xl p-5 mt-4">
                     <h3 className="font-bold text-[#0E1B3D] mb-4 text-sm">Agenda Items (Optional)</h3>
-                    {form.agenda.map((item, i) => (
-                      <div key={i} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
-                        <input value={item.time} onChange={e => setAgenda(i, 'time', e.target.value)} placeholder="Time" className={compactFormFieldClassName}/>
+                    {form.agenda.map((item, i) => {
+                      const timeRange = splitTimeRange(item.time);
+                      return (
+                      <div key={i} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-3">
+                        <select value={timeRange.start} onChange={e => setAgendaRange(i, 'start', e.target.value)} className={compactFormFieldClassName}>
+                          <option value="">{agendaTimeOptions.length ? 'Start Time' : 'Set event time first'}</option>
+                          {agendaTimeOptions.map(option => (
+                            <option key={`start-${option.value}`} value={option.value}>{option.value}</option>
+                          ))}
+                        </select>
+                        <select value={timeRange.end} onChange={e => setAgendaRange(i, 'end', e.target.value)} className={compactFormFieldClassName}>
+                          <option value="">{agendaTimeOptions.length ? 'End Time' : 'Set event time first'}</option>
+                          {agendaTimeOptions.map(option => (
+                            <option key={`end-${option.value}`} value={option.value}>{option.value}</option>
+                          ))}
+                        </select>
                         <input value={item.title} onChange={e => setAgenda(i, 'title', e.target.value)} placeholder="Title" className={compactFormFieldClassName}/>
-                        <input value={item.duration} onChange={e => setAgenda(i, 'duration', e.target.value)} placeholder="Duration" className={compactFormFieldClassName}/>
+                        <input value={item.duration} readOnly placeholder="Duration" className={compactFormFieldClassName}/>
                         <select value={item.speaker} onChange={e => setAgendaSpeaker(i, e.target.value)} className={compactFormFieldClassName}>
                           <option value="">Select Speaker</option>
                           {speakerNames.map(name => (
@@ -419,10 +551,10 @@ export default function CreateEventPage() {
                           ))}
                         </select>
                         {form.agenda.length > 1 && (
-                          <button type="button" onClick={() => removeAgenda(i)} className="text-red-400 text-xs xl:col-start-4 text-right">Remove</button>
+                          <button type="button" onClick={() => removeAgenda(i)} className="text-red-400 text-xs xl:col-start-5 text-right">Remove</button>
                         )}
                       </div>
-                    ))}
+                    )})}
                     <button type="button" onClick={addAgenda} className="shine-button mt-1 inline-flex items-center justify-center bg-gradient-to-br from-[#C84B11] to-[#E8622A] px-4 py-2 text-xs font-bold text-white shadow-[0_10px_20px_rgba(200,75,17,0.18)] transition-transform hover:-translate-y-0.5">+ Add Agenda Item</button>
                   </div>
                 )}
@@ -446,11 +578,24 @@ export default function CreateEventPage() {
                             <button type="button" onClick={() => removeDay(dayIdx)} className="text-red-400 text-xs font-bold">Remove Day</button>
                           )}
                         </div>
-                        {d.agenda.map((item, ai) => (
-                          <div key={ai} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
-                            <input value={item.time} onChange={e => setDayAgenda(dayIdx, ai, 'time', e.target.value)} placeholder="Time" className={compactFormFieldClassName}/>
+                        {d.agenda.map((item, ai) => {
+                          const timeRange = splitTimeRange(item.time);
+                          return (
+                          <div key={ai} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-3">
+                            <select value={timeRange.start} onChange={e => setDayAgendaRange(dayIdx, ai, 'start', e.target.value)} className={compactFormFieldClassName}>
+                              <option value="">{agendaTimeOptions.length ? 'Start Time' : 'Set event time first'}</option>
+                              {agendaTimeOptions.map(option => (
+                                <option key={`${d.day}-start-${option.value}`} value={option.value}>{option.value}</option>
+                              ))}
+                            </select>
+                            <select value={timeRange.end} onChange={e => setDayAgendaRange(dayIdx, ai, 'end', e.target.value)} className={compactFormFieldClassName}>
+                              <option value="">{agendaTimeOptions.length ? 'End Time' : 'Set event time first'}</option>
+                              {agendaTimeOptions.map(option => (
+                                <option key={`${d.day}-end-${option.value}`} value={option.value}>{option.value}</option>
+                              ))}
+                            </select>
                             <input value={item.title} onChange={e => setDayAgenda(dayIdx, ai, 'title', e.target.value)} placeholder="Title" className={compactFormFieldClassName}/>
-                            <input value={item.duration} onChange={e => setDayAgenda(dayIdx, ai, 'duration', e.target.value)} placeholder="Duration" className={compactFormFieldClassName}/>
+                            <input value={item.duration} readOnly placeholder="Duration" className={compactFormFieldClassName}/>
                             <select value={item.speaker} onChange={e => setDayAgendaSpeaker(dayIdx, ai, e.target.value)} className={compactFormFieldClassName}>
                               <option value="">Select Speaker</option>
                               {speakerNames.map(name => (
@@ -458,10 +603,10 @@ export default function CreateEventPage() {
                               ))}
                             </select>
                             {d.agenda.length > 1 && (
-                              <button type="button" onClick={() => removeDayAgenda(dayIdx, ai)} className="text-red-400 text-xs xl:col-start-4 text-right">Remove</button>
+                              <button type="button" onClick={() => removeDayAgenda(dayIdx, ai)} className="text-red-400 text-xs xl:col-start-5 text-right">Remove</button>
                             )}
                           </div>
-                        ))}
+                        )})}
                         <button type="button" onClick={() => addDayAgenda(dayIdx)} className="shine-button inline-flex items-center justify-center bg-gradient-to-br from-[#C84B11] to-[#E8622A] px-4 py-2 text-xs font-bold text-white shadow-[0_10px_20px_rgba(200,75,17,0.18)] transition-transform hover:-translate-y-0.5">+ Add Item to Day {d.day}</button>
                       </div>
                     ))}
@@ -760,7 +905,3 @@ export default function CreateEventPage() {
     </AdminLayout>
   );
 }
-
-
-
-

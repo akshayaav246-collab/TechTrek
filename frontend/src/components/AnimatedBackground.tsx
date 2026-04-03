@@ -18,25 +18,6 @@ export function AnimatedBackground() {
     { x: "90%", y: "50%", size: 14, color: "border-[#e8631a]/20" },
   ];
 
-  // Fixed positions to avoid Math.random() hydration mismatch in Next.js
-  const binaryDots = [
-    { left: "12%", top: "8%",  val: "1" },
-    { left: "34%", top: "15%", val: "0" },
-    { left: "67%", top: "5%",  val: "1" },
-    { left: "88%", top: "22%", val: "0" },
-    { left: "5%",  top: "42%", val: "1" },
-    { left: "45%", top: "38%", val: "0" },
-    { left: "72%", top: "44%", val: "1" },
-    { left: "92%", top: "35%", val: "0" },
-    { left: "18%", top: "58%", val: "1" },
-    { left: "55%", top: "62%", val: "0" },
-    { left: "78%", top: "55%", val: "1" },
-    { left: "38%", top: "72%", val: "0" },
-    { left: "60%", top: "78%", val: "1" },
-    { left: "25%", top: "92%", val: "0" },
-    { left: "82%", top: "90%", val: "1" },
-  ];
-
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       {/* Vertical lines */}

@@ -15,7 +15,7 @@ type CheckInResult = {
 };
 
 export default function CheckInPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
   const [scannerReady, setScannerReady] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
@@ -27,21 +27,24 @@ export default function CheckInPage() {
 
   // Auth guard
   useEffect(() => {
-    if (!user || !token) { router.push('/login?redirect=/coordinator/checkin'); }
-  }, [user, token, router]);
+    if (isLoading) return;
+    if (!user || !token) { router.push('/admin/login'); return; }
+    if (user.role !== 'admin' && user.role !== 'superAdmin') { router.push('/'); }
+  }, [user, token, isLoading, router]);
 
   // Load html5-qrcode dynamically
   useEffect(() => {
+    if (isLoading) return;
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
     script.onload = () => setScannerReady(true);
     document.head.appendChild(script);
     return () => { document.head.removeChild(script); };
-  }, []);
+  }, [isLoading]);
 
   // Start scanner once library is ready
   useEffect(() => {
-    if (!scannerReady || !scannerRef.current) return;
+    if (isLoading || !user || !token || !scannerReady || !scannerRef.current) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
     const scanner = new w.Html5Qrcode('qr-scanner-element');
@@ -61,16 +64,16 @@ export default function CheckInPage() {
       scanner.stop().catch(() => {});
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scannerReady]);
+  }, [scannerReady, isLoading, user, token]);
 
   const processQR = async (rawText: string) => {
     setProcessing(true);
     setResult(null);
     try {
-      const res = await fetch('http://localhost:5000/api/checkin', {
+      const res = await fetch('http://localhost:5000/api/attendance/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ qrPayload: rawText })
+        body: JSON.stringify({ encryptedQrPayload: rawText })
       });
       const data = await res.json();
       setResult({ ...data, isError: !res.ok });
@@ -100,6 +103,8 @@ export default function CheckInPage() {
     return '✅';
   };
 
+  if (isLoading) return null;
+
   return (
     <div className="min-h-screen bg-[#0E1B3D] flex flex-col items-center justify-start pt-10 pb-16 px-4 font-body">
       <div className="w-full max-w-md">
@@ -109,7 +114,7 @@ export default function CheckInPage() {
             <span className="text-[#e8631a] font-bold text-xs uppercase tracking-widest">Coordinator Panel</span>
           </div>
           <h1 className="font-heading font-extrabold text-3xl text-white">QR Check-In Scanner</h1>
-          <p className="text-white/50 text-sm mt-2">Point camera at student&apos;s QR code to check them in</p>
+          <p className="text-white/50 text-sm mt-2">Only admin-authenticated sessions can process a check-in</p>
         </div>
 
         {/* Scanner */}
@@ -161,7 +166,7 @@ export default function CheckInPage() {
             <textarea
               value={manualInput}
               onChange={e => setManualInput(e.target.value)}
-              placeholder='{"userId":"...","eventId":"...","registrationId":"...","secureHash":"..."}'
+              placeholder='Paste encrypted QR payload here'
               className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-xs font-mono placeholder-white/30 outline-none focus:border-[#e8631a] transition-colors resize-none mb-3"
               rows={4}
             />

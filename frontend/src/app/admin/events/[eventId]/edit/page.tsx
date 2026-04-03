@@ -2,11 +2,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import AdminLayout from '@/components/admin/AdminLayout';
 import dynamic from 'next/dynamic';
 import type { HallLayoutData } from '@/components/VenueMap';
-import { CheckCircleIcon, AlertIcon, GridIcon, PlusIcon, QrIcon, ListIcon } from '@/components/Icons';
+import { CheckCircleIcon, AlertIcon } from '@/components/Icons';
 
 const VenueMap = dynamic(() => import('@/components/VenueMap'), { ssr: false });
 
@@ -15,6 +14,7 @@ const STEPS = ['Basic Info', 'Schedule', 'Hall Layout', 'Speakers', 'Review'];
 
 type Speaker = { name: string; role: string; company: string; bio: string };
 type AgendaItem = { time: string; title: string; duration: string; speaker: string };
+type TimeOption = { value: string; label: string; duration: string };
 type FormData = {
   name: string; collegeName: string; collegeDomain: string; city: string;
   venue: string; dateTime: string; capacity: string; description: string;
@@ -36,6 +36,61 @@ const defaultForm: FormData = {
   agenda: [{ time: '', title: '', duration: '', speaker: '' }],
 };
 
+function parseLocalDateTime(value: string) {
+  if (!value) return null;
+  const [datePart, timePart] = value.split('T');
+  if (!datePart || !timePart) return null;
+
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+  if ([year, month, day, hour, minute].some(Number.isNaN)) return null;
+
+  return new Date(year, month - 1, day, hour, minute);
+}
+
+function formatTimeLabel(date: Date) {
+  return date.toLocaleTimeString('en-IN', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function buildTimeOptions(startValue: string) {
+  const start = parseLocalDateTime(startValue);
+  if (!start) return [] as TimeOption[];
+
+  const end = new Date(start.getTime() + 8 * 60 * 60 * 1000);
+  const options: TimeOption[] = [];
+  let current = new Date(start);
+
+  while (current < end) {
+    options.push({
+      value: formatTimeLabel(current),
+      label: formatTimeLabel(current),
+      duration: '15 mins',
+    });
+    current = new Date(current.getTime() + 15 * 60 * 1000);
+  }
+
+  return options;
+}
+
+function splitTimeRange(value: string) {
+  const parts = value.split(' - ').map(part => part.trim());
+  if (parts.length === 2) {
+    return { start: parts[0], end: parts[1] };
+  }
+  return { start: value, end: '' };
+}
+
+function getDurationFromRange(start: string, end: string, options: TimeOption[]) {
+  const startIndex = options.findIndex(option => option.value === start);
+  const endIndex = options.findIndex(option => option.value === end);
+  if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) return '';
+  return `${(endIndex - startIndex) * 15} mins`;
+}
+
 // Defined OUTSIDE component to prevent remount on each keystroke
 function FormInput({ label, type = 'text', placeholder = '', value, onChange, required = false }: {
   label: string; type?: string; placeholder?: string; value: string;
@@ -52,7 +107,7 @@ function FormInput({ label, type = 'text', placeholder = '', value, onChange, re
 }
 
 export default function EditEventPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const eventId = params.eventId as string;
@@ -96,12 +151,13 @@ export default function EditEventPage() {
   }, [eventId]);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user || !token) { router.push('/admin/login'); return; }
     if (user.role !== 'admin' && user.role !== 'superAdmin') { router.push('/'); return; }
     fetchEvent();
     fetch('http://localhost:5000/api/halls', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(setSavedHalls).catch(() => {});
-  }, [user, token, router, fetchEvent]);
+  }, [user, token, isLoading, router, fetchEvent]);
 
   const set = (k: keyof FormData, v: string) => setForm(prev => ({ ...prev, [k]: v }));
   const setL = (k: keyof HallLayoutData, v: unknown) => setLayout(prev => ({ ...prev, [k]: v }));
@@ -126,6 +182,21 @@ export default function EditEventPage() {
 
   const setAgenda = (i: number, k: string, v: string) =>
     setForm(prev => { const a = [...prev.agenda]; a[i] = { ...a[i], [k]: v }; return { ...prev, agenda: a }; });
+  const agendaTimeOptions = buildTimeOptions(form.dateTime);
+  const setAgendaRange = (i: number, part: 'start' | 'end', value: string) =>
+    setForm(prev => {
+      const agenda = [...prev.agenda];
+      const current = agenda[i];
+      const range = splitTimeRange(current.time);
+      const nextRange = { ...range, [part]: value };
+      const duration = getDurationFromRange(nextRange.start, nextRange.end, agendaTimeOptions);
+      agenda[i] = {
+        ...current,
+        time: nextRange.start && nextRange.end ? `${nextRange.start} - ${nextRange.end}` : nextRange.start || nextRange.end,
+        duration,
+      };
+      return { ...prev, agenda };
+    });
   const addAgenda = () => setForm(prev => ({ ...prev, agenda: [...prev.agenda, { time: '', title: '', duration: '', speaker: '' }] }));
   const removeAgenda = (i: number) => setForm(prev => ({ ...prev, agenda: prev.agenda.filter((_, idx) => idx !== i) }));
 
@@ -236,18 +307,38 @@ export default function EditEventPage() {
                     </div>
                     <div className="bg-[#FAF8F4] border border-[#C84B11]/20 rounded-2xl p-5 mt-4">
                       <h3 className="font-bold text-[#0E1B3D] mb-4 text-sm">Agenda Items (Optional)</h3>
-                      {form.agenda.map((item, i) => (
-                        <div key={i} className="grid grid-cols-4 gap-3 mb-3">
-                          {['time', 'title', 'duration', 'speaker'].map(k => (
-                            <input key={k} value={item[k as keyof AgendaItem]} onChange={e => setAgenda(i, k, e.target.value)}
-                              placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
-                              className="bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
-                          ))}
+                      {form.agenda.map((item, i) => {
+                        const timeRange = splitTimeRange(item.time);
+                        return (
+                        <div key={i} className="grid grid-cols-5 gap-3 mb-3">
+                          <select value={timeRange.start} onChange={e => setAgendaRange(i, 'start', e.target.value)}
+                            className="bg-white text-[#1C1A17] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm">
+                            <option value="">{agendaTimeOptions.length ? 'Start Time' : 'Set event time first'}</option>
+                            {agendaTimeOptions.map(option => (
+                              <option key={`start-${option.value}`} value={option.value}>{option.value}</option>
+                            ))}
+                          </select>
+                          <select value={timeRange.end} onChange={e => setAgendaRange(i, 'end', e.target.value)}
+                            className="bg-white text-[#1C1A17] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm">
+                            <option value="">{agendaTimeOptions.length ? 'End Time' : 'Set event time first'}</option>
+                            {agendaTimeOptions.map(option => (
+                              <option key={`end-${option.value}`} value={option.value}>{option.value}</option>
+                            ))}
+                          </select>
+                          <input value={item.title} onChange={e => setAgenda(i, 'title', e.target.value)}
+                            placeholder="Title"
+                            className="bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
+                          <input value={item.duration} readOnly
+                            placeholder="Duration"
+                            className="bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
+                          <input value={item.speaker} onChange={e => setAgenda(i, 'speaker', e.target.value)}
+                            placeholder="Speaker"
+                            className="bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm"/>
                           {form.agenda.length > 1 && (
-                            <button type="button" onClick={() => removeAgenda(i)} className="text-red-400 text-xs col-start-4 text-right">Remove</button>
+                            <button type="button" onClick={() => removeAgenda(i)} className="text-red-400 text-xs col-start-5 text-right">Remove</button>
                           )}
                         </div>
-                      ))}
+                      )})}
                       <button type="button" onClick={addAgenda} className="text-[#C84B11] text-xs font-bold mt-1 hover:underline">+ Add Agenda Item</button>
                     </div>
                   </div>

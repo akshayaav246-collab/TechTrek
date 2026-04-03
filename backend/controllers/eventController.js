@@ -3,6 +3,13 @@ const Registration = require('../models/Registration');
 const Feedback = require('../models/Feedback');
 const Speaker = require('../models/Speaker');
 const { normalizeName } = require('./speakerController');
+const { isCertificateAvailable } = require('../services/certificateService');
+
+const canManageEvent = (event, user) => {
+  if (!event || !user) return false;
+  if (user.role === 'superAdmin') return true;
+  return event.createdBy?.toString() === user._id.toString();
+};
 
 const syncSpeakerLibrary = async (speakers = [], user) => {
   const filledSpeakers = speakers
@@ -163,7 +170,7 @@ const getAdminAnalytics = async (req, res) => {
       .map(([city, count]) => ({ city, count }));
 
     // Recent registrations (last 10)
-    const recentRegs = await Registration.find({ event: { $in: eventIds } })
+    const recentRegs = await Registration.find({ event: { $in: eventIds }, cancelledAt: null })
       .sort({ createdAt: -1 }).limit(10)
       .populate('user', 'name email college')
       .populate('event', 'name collegeName');
@@ -224,7 +231,7 @@ const getParticipants = async (req, res) => {
     const event = await Event.findOne({ eventId: req.params.eventId });
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
-    const regs = await Registration.find({ event: event._id })
+    const regs = await Registration.find({ event: event._id, cancelledAt: null })
       .populate('user', 'name email phone college year discipline')
       .sort({ createdAt: -1 })
       .lean();
@@ -239,6 +246,7 @@ const getParticipants = async (req, res) => {
       event: {
         eventId: event.eventId, name: event.name, capacity: event.capacity,
         status: event.status, venue: event.venue, dateTime: event.dateTime,
+        photos: event.photos || [],
       },
       stats: { total, registered, waitlisted, checkedIn, noShow },
       participants: regs.map(r => ({
@@ -267,7 +275,7 @@ const exportCSV = async (req, res) => {
     const event = await Event.findOne({ eventId: req.params.eventId });
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
-    const regs = await Registration.find({ event: event._id })
+    const regs = await Registration.find({ event: event._id, cancelledAt: null })
       .populate('user', 'name email phone college year discipline')
       .sort({ createdAt: -1 })
       .lean();
@@ -398,19 +406,56 @@ const addFeedback = async (req, res) => {
     const event = await Event.findOne({ eventId: req.params.eventId });
     if (!event) return res.status(404).json({ message: 'Event not found' });
     if (event.status !== 'COMPLETED') return res.status(400).json({ message: 'Event is not completed yet.' });
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ message: 'Only students can submit feedback.' });
+    }
+
+    const registration = await Registration.findOne({ user: req.user._id, event: event._id }).lean();
+    if (!registration) {
+      return res.status(403).json({ message: 'You must register for this event before submitting feedback.' });
+    }
+    if (!registration.checkedIn) {
+      return res.status(403).json({ message: 'Feedback is available only after your attendance is marked.' });
+    }
 
     const exists = await Feedback.findOne({ eventId: event.eventId, studentId: req.user._id });
     if (exists) return res.status(400).json({ message: 'You already submitted feedback for this event.' });
+
+    const trimmedComment = typeof comment === 'string' ? comment.trim() : '';
+    if (!trimmedComment) return res.status(400).json({ message: 'Feedback comment is required.' });
+
+    const numericRating = Number(rating);
+    if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5.' });
+    }
 
     const fb = await Feedback.create({
       eventId: event.eventId,
       studentId: req.user._id,
       studentName: req.user.name,
       college: req.user.college,
-      rating: Number(rating),
-      comment
+      rating: numericRating,
+      comment: trimmedComment
     });
-    res.status(201).json(fb);
+
+    // Mark feedback as submitted
+    registration.feedback_submitted = true;
+    await Registration.findByIdAndUpdate(registration._id, {
+      feedback_submitted: true
+    });
+
+    // Check certificate availability
+    const certStatus = await isCertificateAvailable(registration._id);
+    let certResponse = { certificateAvailable: false };
+    
+    if (certStatus === true) {
+      const regRecord = await Registration.findById(registration._id).lean();
+      certResponse = { certificateAvailable: true, downloadUrl: regRecord.certificate_url };
+    } else {
+      certResponse = { certificateAvailable: false, reason: certStatus };
+    }
+
+    res.status(201).json({ ...fb.toObject(), ...certResponse });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -418,6 +463,24 @@ const addFeedback = async (req, res) => {
 
 const getEventFeedback = async (req, res) => {
   try {
+    const feedback = await Feedback.find({
+      eventId: req.params.eventId,
+      isApprovedForEventPage: true,
+    }).sort({ createdAt: -1 });
+    res.json(feedback);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getEventFeedbackAdmin = async (req, res) => {
+  try {
+    const event = await Event.findOne({ eventId: req.params.eventId }).select('eventId name createdBy status');
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!canManageEvent(event, req.user)) {
+      return res.status(403).json({ message: 'Not authorized for this event' });
+    }
+
     const feedback = await Feedback.find({ eventId: req.params.eventId }).sort({ createdAt: -1 });
     res.json(feedback);
   } catch (error) {
@@ -425,11 +488,124 @@ const getEventFeedback = async (req, res) => {
   }
 };
 
+const getFeedbackCurationAdmin = async (req, res) => {
+  try {
+    const eventFilter = req.user.role === 'superAdmin'
+      ? { status: 'COMPLETED' }
+      : { createdBy: req.user._id, status: 'COMPLETED' };
+
+    const events = await Event.find(eventFilter)
+      .select('eventId name dateTime venue city status')
+      .sort({ dateTime: -1 })
+      .lean();
+
+    const eventIds = events.map(event => event.eventId);
+    const feedback = eventIds.length
+      ? await Feedback.find({ eventId: { $in: eventIds } })
+        .sort({ createdAt: -1 })
+        .lean()
+      : [];
+
+    const byEvent = new Map();
+    feedback.forEach((item) => {
+      if (!byEvent.has(item.eventId)) byEvent.set(item.eventId, []);
+      byEvent.get(item.eventId).push(item);
+    });
+
+    const totals = feedback.reduce((acc, item) => {
+      acc.total += 1;
+      if (item.isApprovedForLanding) acc.landing += 1;
+      if (item.isApprovedForEventPage) acc.eventPage += 1;
+      return acc;
+    }, { total: 0, landing: 0, eventPage: 0 });
+
+    res.json({
+      summary: {
+        completedEvents: events.length,
+        totalFeedback: totals.total,
+        landingSelected: totals.landing,
+        eventPageSelected: totals.eventPage,
+      },
+      events: events.map((event) => {
+        const items = byEvent.get(event.eventId) || [];
+        return {
+          ...event,
+          totalFeedback: items.length,
+          landingSelected: items.filter(item => item.isApprovedForLanding).length,
+          eventPageSelected: items.filter(item => item.isApprovedForEventPage).length,
+          latestFeedbackAt: items[0]?.createdAt || null,
+          preview: items.slice(0, 3).map(item => ({
+            _id: item._id,
+            studentName: item.studentName,
+            college: item.college,
+            comment: item.comment,
+            rating: item.rating,
+            isApprovedForLanding: item.isApprovedForLanding,
+            isApprovedForEventPage: item.isApprovedForEventPage,
+          })),
+        };
+      }),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updateFeedbackVisibility = async (req, res) => {
+  try {
+    const event = await Event.findOne({ eventId: req.params.eventId }).select('eventId createdBy');
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!canManageEvent(event, req.user)) {
+      return res.status(403).json({ message: 'Not authorized for this event' });
+    }
+
+    const fb = await Feedback.findById(req.params.feedbackId);
+    if (!fb || fb.eventId !== req.params.eventId) {
+      return res.status(404).json({ message: 'Feedback not found' });
+    }
+
+    const { isApprovedForLanding, isApprovedForEventPage } = req.body || {};
+    if (typeof isApprovedForLanding === 'boolean') {
+      fb.isApprovedForLanding = isApprovedForLanding;
+    }
+    if (typeof isApprovedForEventPage === 'boolean') {
+      fb.isApprovedForEventPage = isApprovedForEventPage;
+    }
+
+    await fb.save();
+    res.json(fb);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const toggleFeedbackLanding = async (req, res) => {
   try {
+    const event = await Event.findOne({ eventId: req.params.eventId }).select('eventId createdBy');
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!canManageEvent(event, req.user)) {
+      return res.status(403).json({ message: 'Not authorized for this event' });
+    }
     const fb = await Feedback.findById(req.params.feedbackId);
-    if (!fb) return res.status(404).json({ message: 'Feedback not found' });
+    if (!fb || fb.eventId !== req.params.eventId) return res.status(404).json({ message: 'Feedback not found' });
     fb.isApprovedForLanding = !fb.isApprovedForLanding;
+    await fb.save();
+    res.json(fb);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const toggleFeedbackEventPage = async (req, res) => {
+  try {
+    const event = await Event.findOne({ eventId: req.params.eventId }).select('eventId createdBy');
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!canManageEvent(event, req.user)) {
+      return res.status(403).json({ message: 'Not authorized for this event' });
+    }
+    const fb = await Feedback.findById(req.params.feedbackId);
+    if (!fb || fb.eventId !== req.params.eventId) return res.status(404).json({ message: 'Feedback not found' });
+    fb.isApprovedForEventPage = !fb.isApprovedForEventPage;
     await fb.save();
     res.json(fb);
   } catch (error) {
@@ -439,11 +615,20 @@ const toggleFeedbackLanding = async (req, res) => {
 
 const getFeaturedFeedback = async (req, res) => {
   try {
-    const fb = await Feedback.find({ isApprovedForLanding: true }).sort({ createdAt: -1 });
-    res.json(fb);
+    const fb = await Feedback.find({ isApprovedForLanding: true }).sort({ createdAt: -1 }).lean();
+    const eventIds = [...new Set(fb.map(item => item.eventId).filter(Boolean))];
+    const events = eventIds.length
+      ? await Event.find({ eventId: { $in: eventIds } }).select('eventId name').lean()
+      : [];
+    const eventNameById = new Map(events.map(event => [event.eventId, event.name]));
+
+    res.json(fb.map(item => ({
+      ...item,
+      eventName: eventNameById.get(item.eventId) || item.eventId,
+    })));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = { getEvents, getEventById, createEvent, getMyEvents, getEventDashboard, markEventCompleted, getAdminAnalytics, attachHallLayout, getParticipants, exportCSV, updateEvent, deleteEvent, startCheckin, getEventColleges, uploadPhotos, addFeedback, getEventFeedback, toggleFeedbackLanding, getFeaturedFeedback };
+module.exports = { getEvents, getEventById, createEvent, getMyEvents, getEventDashboard, markEventCompleted, getAdminAnalytics, attachHallLayout, getParticipants, exportCSV, updateEvent, deleteEvent, startCheckin, getEventColleges, uploadPhotos, addFeedback, getEventFeedback, getEventFeedbackAdmin, getFeedbackCurationAdmin, updateFeedbackVisibility, toggleFeedbackLanding, toggleFeedbackEventPage, getFeaturedFeedback };

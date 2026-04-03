@@ -8,7 +8,7 @@ import VenueMap from '@/components/VenueMap';
 import type { HallLayoutData } from '@/components/VenueMap';
 
 export default function AttachHallPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const eventId = params.eventId as string;
@@ -47,6 +47,10 @@ export default function AttachHallPage() {
     } catch { setMsg('Network error'); }
     finally { setSubmitting(false); }
   };
+
+  if (isLoading) {
+    return null;
+  }
 
   if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">Access Denied</div>;

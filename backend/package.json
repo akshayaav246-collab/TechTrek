@@ -5,7 +5,8 @@
   "main": "seed.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate:security": "node scripts/migrateSecurityFeatures.js"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,9 @@
     "mongoose": "^9.3.2",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.4",
-    "qrcode": "^1.5.4"
+    "puppeteer": "^24.40.0",
+    "qrcode": "^1.5.4",
+    "razorpay": "^2.9.6",
+    "redis": "^5.11.0"
   }
 }

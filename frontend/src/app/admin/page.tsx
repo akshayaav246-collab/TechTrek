@@ -20,7 +20,38 @@ type EventRow = {
   registeredCount: number; capacity: number; checkedInCount: number; waitlistCount: number; dateTime: string;
   amount: number; revenue: number;
 };
+type LiveAlert = { type?: string; message: string; timestamp?: string; studentName?: string; eventName?: string };
 type KpiKey = 'events' | 'active' | 'registrations' | 'revenue';
+type FeedbackPreview = {
+  _id: string;
+  studentName: string;
+  college: string;
+  comment: string;
+  rating: number;
+  isApprovedForLanding?: boolean;
+  isApprovedForEventPage?: boolean;
+};
+type FeedbackCurationEvent = {
+  eventId: string;
+  name: string;
+  dateTime: string;
+  venue?: string;
+  city?: string;
+  totalFeedback: number;
+  landingSelected: number;
+  eventPageSelected: number;
+  latestFeedbackAt?: string | null;
+  preview: FeedbackPreview[];
+};
+type FeedbackCurationResponse = {
+  summary: {
+    completedEvents: number;
+    totalFeedback: number;
+    landingSelected: number;
+    eventPageSelected: number;
+  };
+  events: FeedbackCurationEvent[];
+};
 
 const formatRevenue = (rev: number) => {
   if (rev >= 100000) return `₹${(rev/100000).toFixed(1)}L`;
@@ -136,22 +167,25 @@ const Metric = ({
 );
 
 export default function AdminPage() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [topCities, setTopCities] = useState<TopCity[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [liveAlerts, setLiveAlerts] = useState<LiveAlert[]>([]);
+  const [feedbackCuration, setFeedbackCuration] = useState<FeedbackCurationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeKpi, setActiveKpi] = useState<KpiKey | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!token) return;
     try {
-      const [analyticsRes, eventsRes, publicEventsRes] = await Promise.all([
+      const [analyticsRes, eventsRes, publicEventsRes, feedbackRes] = await Promise.all([
         fetch('http://localhost:5000/api/events/analytics', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('http://localhost:5000/api/events/mine', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('http://localhost:5000/api/events'),
+        fetch('http://localhost:5000/api/events/feedback/curation/admin', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       const ownEvents = eventsRes.ok ? (await eventsRes.json()) : [];
@@ -179,16 +213,52 @@ export default function AdminPage() {
         setTopCities(derived.topCities);
         setActivity(derived.recentActivity);
       }
+
+      if (feedbackRes.ok) {
+        setFeedbackCuration(await feedbackRes.json());
+      } else {
+        setFeedbackCuration(null);
+      }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [token]);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user || !token) { router.push('/admin/login'); return; }
     if (user.role !== 'admin' && user.role !== 'superAdmin') { router.push('/'); return; }
     fetchData();
-  }, [user, token, router, fetchData]);
+  }, [user, token, isLoading, router, fetchData]);
 
+  useEffect(() => {
+    if (!token) return;
+    const stream = new EventSource(`http://localhost:5000/api/admin/alerts/stream?token=${encodeURIComponent(token)}`);
+
+    const handleAlert = (event: MessageEvent<string>) => {
+      try {
+        const payload = JSON.parse(event.data) as LiveAlert;
+        setLiveAlerts(prev => [payload, ...prev].slice(0, 6));
+        if (payload.type === 'registration.cancelled' || payload.type === 'registration.promoted') {
+          fetchData();
+        }
+      } catch {
+        // Ignore malformed alert payloads.
+      }
+    };
+
+    stream.addEventListener('attendance-alert', handleAlert);
+    stream.addEventListener('registration-cancelled', handleAlert);
+    stream.addEventListener('participant-promoted', handleAlert);
+
+    return () => {
+      stream.removeEventListener('attendance-alert', handleAlert);
+      stream.removeEventListener('registration-cancelled', handleAlert);
+      stream.removeEventListener('participant-promoted', handleAlert);
+      stream.close();
+    };
+  }, [token, fetchData]);
+
+  if (isLoading) return null;
   if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) return null;
 
   const now = new Date();
@@ -361,6 +431,116 @@ export default function AdminPage() {
           </div>
         )}
 
+        {liveAlerts.length > 0 && (
+          <div className="bg-white rounded-2xl border border-[#E2D8CC] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Live Alerts</h2>
+                <p className="text-xs text-[#7A7166]">Unauthorized scans, cancellations, and promotions appear here in real time.</p>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C84B11] bg-[#FAF7F2] border border-[#E2D8CC] px-2.5 py-1 rounded-md">SSE</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {liveAlerts.map((alert, index) => (
+                <div key={`${alert.timestamp || 'alert'}-${index}`} className="rounded-xl border border-gray-100 bg-[#FAF7F2]/70 p-4">
+                  <p className="text-sm font-bold text-[#1C1A17]">{alert.message}</p>
+                  <p className="text-xs text-[#7A7166] mt-1">
+                    {[alert.studentName, alert.eventName, alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''].filter(Boolean).join(' • ')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 fill-mode-both">
+          <div className="px-6 py-5 border-b border-[#FAF7F2] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Feedback Curation</h2>
+              <p className="text-sm text-[#7A7166] mt-1">Pick which student quotes appear on the landing page and which stay on event detail pages.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-3 md:min-w-[360px]">
+              <div className="rounded-2xl border border-[#E2D8CC] bg-[#FAF7F2] px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#7A7166]">Collected</p>
+                <p className="mt-1 text-2xl font-[Syne] font-[800] text-[#1C1A17]">{feedbackCuration?.summary.totalFeedback || 0}</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700/70">Landing</p>
+                <p className="mt-1 text-2xl font-[Syne] font-[800] text-emerald-700">{feedbackCuration?.summary.landingSelected || 0}</p>
+              </div>
+              <div className="rounded-2xl border border-[#1A4A7A]/10 bg-[#1A4A7A]/5 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1A4A7A]/60">Event Pages</p>
+                <p className="mt-1 text-2xl font-[Syne] font-[800] text-[#1A4A7A]">{feedbackCuration?.summary.eventPageSelected || 0}</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            {!feedbackCuration || feedbackCuration.events.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#E2D8CC] bg-[#FAF7F2]/70 px-6 py-10 text-center">
+                <p className="font-bold text-[#1C1A17]">No completed events with feedback yet.</p>
+                <p className="text-sm text-[#7A7166] mt-2">Once students submit feedback for completed events, you can curate quotes here.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                {feedbackCuration.events.map((event) => (
+                  <div key={event.eventId} className="rounded-[1.75rem] border border-[#E2D8CC] bg-[#FFFCF8] p-5 shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-[Syne] font-[800] text-xl text-[#1C1A17]">{event.name}</p>
+                        <p className="text-sm text-[#7A7166] mt-1">
+                          {new Date(event.dateTime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {event.venue ? ` • ${event.venue}` : event.city ? ` • ${event.city}` : ''}
+                        </p>
+                      </div>
+                      <Link
+                        href={`/admin/events/${event.eventId}?tab=media#feedback-curation`}
+                        className="rounded-xl bg-[#0E1B3D] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1A4A7A]"
+                      >
+                        Curate
+                      </Link>
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 gap-3">
+                      <div className="rounded-2xl bg-white px-3 py-3 border border-[#E2D8CC]">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#7A7166]">Total</p>
+                        <p className="mt-1 text-xl font-[Syne] font-[800] text-[#1C1A17]">{event.totalFeedback}</p>
+                      </div>
+                      <div className="rounded-2xl bg-emerald-50 px-3 py-3 border border-emerald-100">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700/70">Landing</p>
+                        <p className="mt-1 text-xl font-[Syne] font-[800] text-emerald-700">{event.landingSelected}</p>
+                      </div>
+                      <div className="rounded-2xl bg-[#1A4A7A]/5 px-3 py-3 border border-[#1A4A7A]/10">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#1A4A7A]/60">Event</p>
+                        <p className="mt-1 text-xl font-[Syne] font-[800] text-[#1A4A7A]">{event.eventPageSelected}</p>
+                      </div>
+                    </div>
+                    <div className="mt-5 space-y-3">
+                      {event.preview.length === 0 ? (
+                        <p className="text-sm text-[#7A7166]">No feedback submitted for this event yet.</p>
+                      ) : (
+                        event.preview.map((item) => (
+                          <div key={item._id} className="rounded-2xl border border-[#E2D8CC] bg-white px-4 py-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-bold text-[#1C1A17]">{item.studentName}</p>
+                                <p className="text-xs text-[#7A7166]">{item.college}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                {item.isApprovedForLanding && <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Landing</span>}
+                                {item.isApprovedForEventPage && <span className="rounded-full bg-[#1A4A7A]/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1A4A7A]">Event</span>}
+                              </div>
+                            </div>
+                            <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-[#5F574E]">&quot;{item.comment}&quot;</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── Row 2: Top Events by Reg & Revenue Breakdown ────────────── */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 shrink-0">
@@ -373,7 +553,7 @@ export default function AdminPage() {
             <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] p-6 h-[270px] flex flex-col hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
               <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17] mb-6">Top Events by Registrations</h2>
               <div className="flex-1 overflow-y-auto pr-2 space-y-5 font-[DM_Sans]">
-                {topEventsByReg.map((evt, i) => {
+                {topEventsByReg.map((evt) => {
                   return (
                     <div key={evt.eventId} className="flex items-center gap-4 group">
                       <span className="w-40 truncate text-sm font-bold text-[#7A7166] group-hover:text-[#1C1A17] transition-colors">{evt.name}</span>
@@ -391,7 +571,7 @@ export default function AdminPage() {
             <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] p-6 h-[270px] flex flex-col hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
               <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17] mb-6">Revenue Breakdown</h2>
               <div className="flex-1 overflow-y-auto pr-2 space-y-5 font-[DM_Sans]">
-                {topEventsByRev.map((evt, i) => {
+                {topEventsByRev.map((evt) => {
                   return (
                     <div key={evt.eventId} className="flex items-center gap-4 group">
                       <span className="w-40 truncate text-sm font-bold text-[#7A7166] group-hover:text-[#1C1A17] transition-colors">{evt.name}</span>

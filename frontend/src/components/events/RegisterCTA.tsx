@@ -7,24 +7,26 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { HallLayoutData, SeatStatus } from '@/components/VenueMap';
-import { LocationIcon, CheckCircleIcon, HourglassIcon, AlertIcon, DownloadIcon, SeatIcon, XIcon, CreditCardIcon, ClockIcon } from '@/components/Icons';
+import { CheckCircleIcon, HourglassIcon, AlertIcon, SeatIcon, XIcon, CreditCardIcon, ClockIcon } from '@/components/Icons';
 
 const VenueMap = dynamic(() => import('@/components/VenueMap'), { ssr: false });
 import { DaySelectionModal } from '@/components/events/DaySelectionModal';
 
 type RegistrationStatus = 'IDLE' | 'REGISTERED' | 'WAITLISTED' | 'ERROR';
 
-type MyRegistration = {
-  _id: string; status: string; qrCode?: string; checkedIn?: boolean; createdAt: string;
-  event: { eventId: string; name: string; collegeName: string; city: string; venue: string; dateTime: string; status: string; };
-};
-
 function Countdown({ expiresAt }: { expiresAt: string }) {
-  const [seconds, setSeconds] = useState(0);
+  const [seconds, setSeconds] = useState(() =>
+    Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
+  );
+
   useEffect(() => {
-    const calc = () => Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
-    setSeconds(calc());
-    const id = setInterval(() => setSeconds(() => { const n = calc(); if (n <= 0) clearInterval(id); return n; }), 1000);
+    const id = setInterval(() => {
+      setSeconds(() => {
+        const nextSeconds = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+        if (nextSeconds <= 0) clearInterval(id);
+        return nextSeconds;
+      });
+    }, 1000);
     return () => clearInterval(id);
   }, [expiresAt]);
   const m = Math.floor(seconds / 60), s = seconds % 60;
@@ -32,10 +34,10 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
 }
 
 export function RegisterCTA({
-  eventId, disabled, status, registered, capacity, percentage, venue, hallLayout, eventAmount, days, eventName,
+  eventId, disabled, status, registered, capacity, percentage, hallLayout, eventAmount, days, eventName,
 }: {
   eventId: string; disabled: boolean; status: string;
-  registered: number; capacity: number; percentage: number; venue: string;
+  registered: number; capacity: number; percentage: number;
   hallLayout?: HallLayoutData | null;
   eventAmount?: number;
   eventName?: string;
@@ -46,7 +48,6 @@ export function RegisterCTA({
   const [loading, setLoading] = useState(false);
   const [regStatus, setRegStatus] = useState<RegistrationStatus>('IDLE');
   const [errorMsg, setErrorMsg] = useState('');
-  const [qrCode, setQrCode] = useState<string | null>(null);
 
   // Seat selection modal state
   const [showSeatModal, setShowSeatModal] = useState(false);
@@ -58,7 +59,6 @@ export function RegisterCTA({
   // Multi-day state
   const isMultiDay = Array.isArray(days) && days.length > 0;
   const [showDayModal, setShowDayModal] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   useEffect(() => {
     if (user && token) {
@@ -66,7 +66,6 @@ export function RegisterCTA({
         .then(r => r.json()).then(data => {
           if (data.isRegistered) {
             setRegStatus(data.status as RegistrationStatus);
-            if (data.qrCode) setQrCode(data.qrCode);
           }
         }).catch(() => {});
     }
@@ -160,7 +159,6 @@ export function RegisterCTA({
       const body: Record<string, unknown> = { eventId };
       if (isMultiDay && chosenDays && chosenDays.length > 0) {
         body.selectedDays = chosenDays;
-        setSelectedDays(chosenDays);
       }
       const res = await fetch('http://localhost:5000/api/registrations', {
         method: 'POST',
@@ -175,7 +173,6 @@ export function RegisterCTA({
         setRegStatus('ERROR'); setErrorMsg(msg); return;
       }
       setRegStatus(data.isWaitlisted ? 'WAITLISTED' : 'REGISTERED');
-      if (data.qrCode) setQrCode(data.qrCode);
       router.refresh();
       if (hallLayout && !data.isWaitlisted) {
         setTimeout(() => openSeatModal(), 400);
@@ -194,14 +191,9 @@ export function RegisterCTA({
     }
   };
 
-  const downloadQR = () => {
-    if (!qrCode) return;
-    const a = document.createElement('a'); a.href = qrCode; a.download = `techtrek-ticket-${eventId}.png`; a.click();
-  };
-
   const isCompleted = regStatus === 'REGISTERED' || regStatus === 'WAITLISTED';
 
-  // Is student trying to click another seat while they已 have one confirmed?
+  // Is student trying to click another seat while they already have one confirmed?
   const alreadyBooked = mySeat?.status === 'confirmed';
 
   return (
@@ -293,7 +285,7 @@ export function RegisterCTA({
         )}
 
         {!user && !isCompleted && status !== 'COMPLETED' && (
-          <p className="text-center text-[10px] md:text-xs text-white/40 mt-4 font-medium relative z-10">You'll be asked to sign in first</p>
+          <p className="text-center text-[10px] md:text-xs text-white/40 mt-4 font-medium relative z-10">You&apos;ll be asked to sign in first</p>
         )}
       </div>
 

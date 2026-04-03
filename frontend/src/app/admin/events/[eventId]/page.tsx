@@ -1,10 +1,12 @@
 "use client";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { SearchIcon, DownloadIcon, BuildingIcon, GridIcon, PlusIcon, QrIcon, ListIcon, CheckCircleIcon } from '@/components/Icons';
+import { SearchIcon, DownloadIcon, CheckCircleIcon } from '@/components/Icons';
+import { useLocalToast } from '@/components/ui/Toast';
 
 type Participant = {
   _id: string; name: string; email: string; phone: string; college: string;
@@ -12,7 +14,17 @@ type Participant = {
   checkedInAt: string | null; registeredAt: string;
 };
 type Stats = { total: number; registered: number; waitlisted: number; checkedIn: number; noShow: number };
-type EventInfo = { eventId: string; name: string; capacity: number; status: string; venue: string; dateTime: string };
+type EventInfo = { eventId: string; name: string; capacity: number; status: string; venue: string; dateTime: string; photos?: string[] };
+type Feedback = {
+  _id: string;
+  studentName: string;
+  college: string;
+  rating: number;
+  comment: string;
+  isApprovedForLanding?: boolean;
+  isApprovedForEventPage?: boolean;
+  createdAt?: string;
+};
 
 const STATUS_STYLE: Record<string, string> = {
   REGISTERED: 'bg-blue-100 text-blue-700',
@@ -32,21 +44,45 @@ function StatCard({ label, val, color, sub }: { label: string; val: number; colo
 }
 
 function MediaTab({ eventId, token }: { eventId: string, token: string }) {
+  const { showToast, ToastContainer } = useLocalToast();
   const [photos, setPhotos] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-
-  useEffect(() => {
-    const urls = photos.map(p => URL.createObjectURL(p));
-    setPhotoPreviews(urls);
-    return () => urls.forEach(u => URL.revokeObjectURL(u));
-  }, [photos]);
+  const [publishedPhotos, setPublishedPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [feedbackFilter, setFeedbackFilter] = useState<'ALL' | 'LANDING' | 'EVENT' | 'HIDDEN'>('ALL');
+  const [feedbackQuery, setFeedbackQuery] = useState('');
+  const [savingFeedbackId, setSavingFeedbackId] = useState<string | null>(null);
+
+  const photoPreviews = useMemo(() => photos.map((photo) => URL.createObjectURL(photo)), [photos]);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/events/${eventId}/feedback`, { headers: { Authorization: `Bearer ${token}` } })
+    return () => photoPreviews.forEach((url) => URL.revokeObjectURL(url));
+  }, [photoPreviews]);
+
+  useEffect(() => {
+    fetch(`http://localhost:5000/api/events/${eventId}`)
+      .then(res => res.json())
+      .then(data => setPublishedPhotos(Array.isArray(data?.photos) ? data.photos : []))
+      .catch(() => {});
+  }, [eventId]);
+
+  useEffect(() => {
+    fetch(`http://localhost:5000/api/events/${eventId}/feedback/admin`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => res.json()).then(setFeedbacks).catch(() => {});
   }, [eventId, token]);
+
+  /** Remove a single photo from the selection */
+  const removePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  /** Merge newly chosen files into the existing selection */
+  const addMorePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || []);
+    setPhotos(prev => [...prev, ...newFiles]);
+    // Reset input value so the same file can be re-chosen if needed
+    e.target.value = '';
+  };
 
   const handleUpload = async () => {
     if (photos.length === 0) return;
@@ -55,86 +91,279 @@ function MediaTab({ eventId, token }: { eventId: string, token: string }) {
     photos.forEach(f => formData.append('photos', f));
     try {
       const res = await fetch(`http://localhost:5000/api/events/${eventId}/photos`, {
-         method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData
       });
       if (res.ok) {
-         setPhotos([]);
-         alert('Photos uploaded successfully!');
+        const data = await res.json();
+        setPhotos([]);
+        setPublishedPhotos(Array.isArray(data?.photos) ? data.photos : []);
+        showToast('Photos uploaded successfully!', 'success');
       } else {
-         const data = await res.json();
-         alert('Upload failed: ' + data.message);
+        const data = await res.json();
+        showToast('Upload failed: ' + data.message, 'error');
       }
-    } catch (e) {
-      alert('Upload failed');
+    } catch {
+      showToast('Upload failed. Please try again.', 'error');
     }
     setUploading(false);
   };
 
-  const toggleLanding = async (id: string) => {
+  const updateVisibility = async (id: string, next: Partial<Feedback>) => {
+    setSavingFeedbackId(id);
     try {
-      const res = await fetch(`http://localhost:5000/api/events/${eventId}/feedback/${id}/toggle-landing`, {
-         method: 'PATCH', headers: { Authorization: `Bearer ${token}` }
+      const current = feedbacks.find(item => item._id === id);
+      if (!current) return;
+      const res = await fetch(`http://localhost:5000/api/events/${eventId}/feedback/${id}/visibility`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isApprovedForLanding: typeof next.isApprovedForLanding === 'boolean' ? next.isApprovedForLanding : current.isApprovedForLanding,
+          isApprovedForEventPage: typeof next.isApprovedForEventPage === 'boolean' ? next.isApprovedForEventPage : current.isApprovedForEventPage,
+        }),
       });
       if (res.ok) {
         const updated = await res.json();
         setFeedbacks(fs => fs.map(f => f._id === id ? updated : f));
+        showToast('Feedback visibility updated.', 'success');
       }
-    } catch (e) {}
+    } catch {
+      showToast('Could not update feedback visibility.', 'error');
+    } finally {
+      setSavingFeedbackId(null);
+    }
   };
 
+  const feedbackStats = useMemo(() => ({
+    total: feedbacks.length,
+    landing: feedbacks.filter(item => item.isApprovedForLanding).length,
+    eventPage: feedbacks.filter(item => item.isApprovedForEventPage).length,
+    hidden: feedbacks.filter(item => !item.isApprovedForLanding && !item.isApprovedForEventPage).length,
+  }), [feedbacks]);
+
+  const filteredFeedbacks = useMemo(() => {
+    const query = feedbackQuery.trim().toLowerCase();
+    return feedbacks.filter((item) => {
+      const matchesQuery =
+        !query ||
+        item.studentName.toLowerCase().includes(query) ||
+        item.college.toLowerCase().includes(query) ||
+        item.comment.toLowerCase().includes(query);
+
+      const matchesFilter =
+        feedbackFilter === 'ALL' ||
+        (feedbackFilter === 'LANDING' && item.isApprovedForLanding) ||
+        (feedbackFilter === 'EVENT' && item.isApprovedForEventPage) ||
+        (feedbackFilter === 'HIDDEN' && !item.isApprovedForLanding && !item.isApprovedForEventPage);
+
+      return matchesQuery && matchesFilter;
+    });
+  }, [feedbackFilter, feedbackQuery, feedbacks]);
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col gap-4">
-        <div>
-          <h3 className="font-extrabold text-xl text-[#0E1B3D] mb-1">Upload Event Photos</h3>
-          <p className="text-xs text-gray-400 font-medium">Select multiple images to push to the student event gallery.</p>
+    <>
+      <ToastContainer />
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col gap-4">
+          <div>
+            <h3 className="font-extrabold text-xl text-[#0E1B3D] mb-1">Upload Event Photos</h3>
+            <p className="text-xs text-gray-400 font-medium">Select multiple images to push to the student event gallery.</p>
+          </div>
+
+          {publishedPhotos.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-gray-400">Published Gallery</h4>
+                <span className="text-xs font-medium text-gray-400">{publishedPhotos.length} photos live</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {publishedPhotos.map((photo, index) => (
+                  <div key={`${photo}-${index}`} className="relative aspect-video overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 shadow-sm">
+                    <Image
+                      src={`http://localhost:5000${photo}`}
+                      alt={`Published event photo ${index + 1}`}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Photo previews with individual remove */}
+          {photoPreviews.length > 0 && (
+            <div className="flex flex-wrap gap-3">
+              {photoPreviews.map((url, i) => (
+                <div key={i} className="relative group h-24 w-24 shrink-0">
+                  <Image
+                    src={url}
+                    alt={`Preview ${i + 1}`}
+                    width={96}
+                    height={96}
+                    unoptimized
+                    className="h-24 w-24 object-cover rounded-xl border border-gray-200 shadow-sm"
+                  />
+                  {/* Remove button — shows on hover */}
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    title="Remove photo"
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <span className="absolute bottom-1 left-1 right-1 text-center text-[9px] text-white bg-black/40 rounded px-1 py-0.5 truncate">
+                    {photos[i]?.name}
+                  </span>
+                </div>
+              ))}
+              {/* "Add More" tile — opens file picker to append */}
+              <label
+                className="h-24 w-24 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:border-[#0E1B3D] hover:text-[#0E1B3D] transition-colors shrink-0"
+                title="Add more photos"
+              >
+                <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="text-[10px] font-bold">Add More</span>
+                <input type="file" multiple accept="image/*" onChange={addMorePhotos} className="hidden" />
+              </label>
+            </div>
+          )}
+
+          {/* Initial file chooser — shown only when no photos selected */}
+          {photoPreviews.length === 0 && (
+            <input type="file" multiple accept="image/*" onChange={addMorePhotos}
+              className="text-sm border border-gray-200 p-3 rounded-xl bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-[#0E1B3D] file:text-white hover:file:bg-[#1a2d5a] transition-all" />
+          )}
+
+          <button disabled={uploading || photos.length === 0} onClick={handleUpload}
+            className="bg-[#C84B11] hover:brightness-110 text-white px-6 py-2.5 font-bold rounded-xl self-start disabled:opacity-50 transition-all shadow-sm">
+            {uploading ? 'Uploading...' : 'Publish Photos to Gallery'}
+          </button>
         </div>
-        <input type="file" multiple accept="image/*" onChange={e => setPhotos(Array.from(e.target.files||[]))} 
-          className="text-sm border border-gray-200 p-3 rounded-xl bg-gray-50 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-[#0E1B3D] file:text-white hover:file:bg-[#1a2d5a] transition-all" />
-        {photoPreviews.length > 0 && (
-          <div className="flex flex-wrap gap-3 my-2">
-            {photoPreviews.map((url, i) => (
-              <img key={i} src={url} alt={`Preview ${i+1}`} className="h-20 w-20 object-cover rounded-lg border border-gray-200 shadow-sm" />
+
+        <div id="feedback-curation" className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+          <div className="flex flex-col gap-5 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+              <div>
+                <h3 className="font-extrabold text-xl text-[#0E1B3D]">Feedback Curation Studio</h3>
+                <p className="text-sm text-gray-500 mt-1">Choose which student quotes appear on the landing page and which stay exclusive to this event page.</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Collected</p>
+                  <p className="mt-1 text-2xl font-extrabold text-[#0E1B3D]">{feedbackStats.total}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600/70">Landing</p>
+                  <p className="mt-1 text-2xl font-extrabold text-emerald-700">{feedbackStats.landing}</p>
+                </div>
+                <div className="rounded-2xl border border-[#0E1B3D]/10 bg-[#0E1B3D]/5 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#0E1B3D]/55">Event Page</p>
+                  <p className="mt-1 text-2xl font-extrabold text-[#0E1B3D]">{feedbackStats.eventPage}</p>
+                </div>
+                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700/70">Hidden</p>
+                  <p className="mt-1 text-2xl font-extrabold text-amber-700">{feedbackStats.hidden}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+              <div className="relative flex-1 max-w-xl">
+                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  value={feedbackQuery}
+                  onChange={e => setFeedbackQuery(e.target.value)}
+                  placeholder="Search by student, college, or quote..."
+                  className="w-full rounded-2xl border border-gray-200 bg-white pl-10 pr-4 py-3 text-sm outline-none focus:border-[#C84B11]"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'ALL', label: 'All', count: feedbackStats.total },
+                  { key: 'LANDING', label: 'Landing Picks', count: feedbackStats.landing },
+                  { key: 'EVENT', label: 'Event Picks', count: feedbackStats.eventPage },
+                  { key: 'HIDDEN', label: 'Hidden', count: feedbackStats.hidden },
+                ].map(item => (
+                  <button
+                    key={item.key}
+                    onClick={() => setFeedbackFilter(item.key as 'ALL' | 'LANDING' | 'EVENT' | 'HIDDEN')}
+                    className={`rounded-xl border px-4 py-2.5 text-xs font-bold transition-all ${
+                      feedbackFilter === item.key
+                        ? 'border-[#0E1B3D] bg-[#0E1B3D] text-white shadow-sm'
+                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    {item.label} ({item.count})
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          {feedbacks.length === 0 && <p className="text-sm text-gray-400 py-4">No feedback collected yet.</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredFeedbacks.map(f => (
+              <div key={f._id} className="p-5 border border-gray-100 rounded-2xl flex flex-col justify-between bg-gray-50/30 hover:shadow-md transition-shadow">
+                <div>
+                  <div className="flex items-start justify-between gap-4 mb-1">
+                    <p className="font-bold text-[#0E1B3D]">{f.studentName} <span className="text-xs text-gray-400 font-medium ml-1">({f.college})</span></p>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {f.isApprovedForLanding && <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Landing</span>}
+                      {f.isApprovedForEventPage && <span className="rounded-full bg-[#0E1B3D]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#0E1B3D]">Event</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-1 mb-3 text-[#C84B11] text-sm">
+                    {Array.from({length: 5}).map((_,i) => <span key={i}>{i < f.rating ? '★' : '☆'}</span>)}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4 bg-white p-4 rounded-xl border border-gray-100">&quot;{f.comment}&quot;</p>
+                  {f.createdAt && (
+                    <p className="text-[11px] font-medium text-gray-400">
+                      Submitted {new Date(f.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => updateVisibility(f._id, { isApprovedForLanding: !f.isApprovedForLanding })}
+                    disabled={savingFeedbackId === f._id}
+                    className={`text-[11px] font-bold px-4 py-2 rounded-xl transition-all self-start flex items-center gap-2 disabled:opacity-60 ${f.isApprovedForLanding ? 'bg-emerald-500 text-white shadow shadow-emerald-500/20' : 'bg-white border text-gray-500 hover:border-gray-300 shadow-sm'}`}>
+                    {f.isApprovedForLanding ? '★ FEATURED ON LANDING PAGE' : '☆ SHOW ON LANDING PAGE'}
+                  </button>
+                  <button
+                    onClick={() => updateVisibility(f._id, { isApprovedForEventPage: !f.isApprovedForEventPage })}
+                    disabled={savingFeedbackId === f._id}
+                    className={`text-[11px] font-bold px-4 py-2 rounded-xl transition-all self-start flex items-center gap-2 disabled:opacity-60 ${f.isApprovedForEventPage ? 'bg-[#0E1B3D] text-white shadow shadow-[#0E1B3D]/20' : 'bg-white border text-gray-500 hover:border-gray-300 shadow-sm'}`}>
+                    {f.isApprovedForEventPage ? '● SHOWN ON EVENT PAGE' : '○ SHOW ON EVENT PAGE'}
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
-        )}
-        <button disabled={uploading || photos.length === 0} onClick={handleUpload} 
-          className="bg-[#C84B11] hover:bg-[#C84B11] text-white px-6 py-2.5 font-bold rounded-xl self-start disabled:opacity-50 transition-all shadow-sm">
-          {uploading ? 'Uploading...' : 'Publish Photos to Gallery'}
-        </button>
-      </div>
-
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-        <h3 className="font-extrabold text-xl text-[#0E1B3D] mb-6">Student Feedback ({feedbacks.length})</h3>
-        {feedbacks.length === 0 && <p className="text-sm text-gray-400 py-4">No feedback collected yet.</p>}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {feedbacks.map(f => (
-            <div key={f._id} className="p-5 border border-gray-100 rounded-2xl flex flex-col justify-between bg-gray-50/30 hover:shadow-md transition-shadow">
-              <div>
-                <p className="font-bold text-[#0E1B3D] mb-1">{f.studentName} <span className="text-xs text-gray-400 font-medium ml-1">({f.college})</span></p>
-                <div className="flex gap-1 mb-3 text-[#C84B11] text-sm">
-                  {Array.from({length: 5}).map((_,i) => <span key={i}>{i < f.rating ? '★' : '☆'}</span>)}
-                </div>
-                <p className="text-sm text-gray-600 mb-4 bg-white p-4 rounded-xl border border-gray-100">"{f.comment}"</p>
-              </div>
-              <button 
-                onClick={() => toggleLanding(f._id)}
-                className={`text-[11px] font-bold px-4 py-2 rounded-xl transition-all self-start flex items-center gap-2 ${f.isApprovedForLanding ? 'bg-emerald-500 text-white shadow shadow-emerald-500/20' : 'bg-white border text-gray-500 hover:border-gray-300 shadow-sm'}`}>
-                {f.isApprovedForLanding ? '★ FEATURED ON LANDING PAGE' : '☆ SHOW ON LANDING PAGE'}
-              </button>
-            </div>
-          ))}
+          {feedbacks.length > 0 && filteredFeedbacks.length === 0 && (
+            <p className="text-sm text-gray-400 py-6">No feedback matches this filter.</p>
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
 export default function AdminEventDashboard() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const eventId = params.eventId as string;
+  const { showToast, ToastContainer } = useLocalToast();
 
   const [eventInfo, setEventInfo] = useState<EventInfo | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -143,8 +372,9 @@ export default function AdminEventDashboard() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [downloading, setDownloading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'PARTICIPANTS' | 'MEDIA'>('PARTICIPANTS');
+  const [activeTab, setActiveTab] = useState<'PARTICIPANTS' | 'MEDIA'>(searchParams.get('tab') === 'media' ? 'MEDIA' : 'PARTICIPANTS');
   const [completing, setCompleting] = useState(false);
+  const [confirmComplete, setConfirmComplete] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -162,16 +392,49 @@ export default function AdminEventDashboard() {
   }, [token, eventId, router]);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) {
       router.push('/admin/login'); return;
     }
     fetchData();
-    const id = setInterval(fetchData, 15000); // poll every 15s
+    const id = setInterval(fetchData, 15000);
     return () => clearInterval(id);
-  }, [user, fetchData, router]);
+  }, [user, isLoading, fetchData, router]);
+
+  useEffect(() => {
+    if (isLoading || !token) return;
+    const stream = new EventSource(`http://localhost:5000/api/admin/alerts/stream?token=${encodeURIComponent(token)}`);
+
+    const syncParticipants = (event?: MessageEvent<string>) => {
+      if (event?.data) {
+        try {
+          const payload = JSON.parse(event.data) as { eventId?: string };
+          if (payload.eventId && payload.eventId !== eventId) return;
+        } catch {
+          // If the event payload is malformed, fall back to a safe refresh.
+        }
+      }
+      fetchData();
+    };
+
+    stream.addEventListener('attendance-alert', syncParticipants);
+    stream.addEventListener('registration-cancelled', syncParticipants);
+    stream.addEventListener('participant-promoted', syncParticipants);
+
+    return () => {
+      stream.removeEventListener('attendance-alert', syncParticipants);
+      stream.removeEventListener('registration-cancelled', syncParticipants);
+      stream.removeEventListener('participant-promoted', syncParticipants);
+      stream.close();
+    };
+  }, [token, isLoading, fetchData, eventId]);
 
   const downloadCSV = async () => {
     if (!token) return;
+    if (participants.length === 0) {
+      showToast('No participants to download.', 'warning');
+      return;
+    }
     setDownloading(true);
     try {
       const res = await fetch(`http://localhost:5000/api/events/${eventId}/export`, {
@@ -182,21 +445,33 @@ export default function AdminEventDashboard() {
       const a = document.createElement('a');
       a.href = url; a.download = `participants-${eventId}.csv`; a.click();
       URL.revokeObjectURL(url);
-    } catch { alert('CSV download failed'); }
+      showToast('CSV downloaded!', 'success');
+    } catch { showToast('CSV download failed. Please try again.', 'error'); }
     finally { setDownloading(false); }
   };
 
   const markCompleted = async () => {
     if (!token || !eventInfo || eventInfo.status === 'COMPLETED') return;
-    if (!confirm('Mark this event as completed?')) return;
+    if (!confirmComplete) {
+      setConfirmComplete(true);
+      showToast('Click "Mark Completed" again to confirm.', 'warning');
+      setTimeout(() => setConfirmComplete(false), 5000);
+      return;
+    }
+    setConfirmComplete(false);
     setCompleting(true);
     try {
       const res = await fetch(`http://localhost:5000/api/events/${eventId}/complete`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) await fetchData();
-    } catch { /* silent */ }
+      if (res.ok) {
+        await fetchData();
+        showToast('Event marked as completed!', 'success');
+      } else {
+        showToast('Failed to mark event as completed.', 'error');
+      }
+    } catch { showToast('Network error. Please try again.', 'error'); }
     finally { setCompleting(false); }
   };
 
@@ -222,194 +497,221 @@ export default function AdminEventDashboard() {
   );
 
   return (
-    <AdminLayout 
-      backHref="/admin/events"
-      title={headerTitle}
-      headerActions={
-        <>
-          {eventInfo?.status !== 'COMPLETED' && (
-            <button onClick={markCompleted} disabled={completing || loading}
-              className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow border border-emerald-200 disabled:opacity-50 w-full sm:w-auto">
-              {completing ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <CheckCircleIcon className="w-4 h-4" />}
-              Mark Completed
-            </button>
-          )}
-          <Link href={`/admin/events/${eventId}/edit`}
-            className="flex items-center justify-center gap-2 border border-[#0E1B3D]/30 text-[#0E1B3D] hover:bg-[#0E1B3D] hover:text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm bg-white w-full sm:w-auto">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-            Edit Details
-          </Link>
-          <button onClick={downloadCSV} disabled={downloading || loading}
-            className="flex items-center justify-center gap-2 bg-[#0E1B3D] hover:bg-[#1a2d5a] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow disabled:opacity-50 w-full sm:w-auto">
-            {downloading ? (
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-            ) : <DownloadIcon className="w-4 h-4" />} Download CSV
-          </button>
-        </>
-      }
-    >
-      <div className="space-y-6">
-        {/* Stats Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {Array.from({length:5}).map((_,i) => <div key={i} className="h-24 bg-white rounded-2xl animate-pulse border border-gray-100"/>)}
-          </div>
-        ) : stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatCard label="Total Capacity" val={eventInfo?.capacity ?? 0} color="text-[#0E1B3D]"/>
-            <StatCard label="Registered" val={stats.registered} color="text-[#C84B11]"/>
-            <StatCard label="Waitlisted" val={stats.waitlisted} color="text-amber-500"/>
-            <StatCard label="Checked-In" val={stats.checkedIn} color="text-emerald-600"/>
-            {eventInfo?.status === 'COMPLETED' ? (
-              <StatCard label="No-Show" val={stats.noShow} color="text-red-500" sub="Registered but absent"/>
-            ) : (
-              <StatCard label="Pending" val={stats.noShow} color="text-gray-400" sub="Haven't checked in yet"/>
-            )}
-          </div>
-        )}
-
-        {eventInfo?.status === 'COMPLETED' && (
-          <div className="flex bg-white rounded-xl p-1 mb-6 border border-gray-100 w-fit shadow-sm">
-            <button onClick={() => setActiveTab('PARTICIPANTS')} className={`px-5 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'PARTICIPANTS' ? 'bg-[#0E1B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#0E1B3D] hover:bg-gray-50'}`}>Participants</button>
-            <button onClick={() => setActiveTab('MEDIA')} className={`px-5 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'MEDIA' ? 'bg-[#0E1B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#0E1B3D] hover:bg-gray-50'}`}>Media & Feedback</button>
-          </div>
-        )}
-
-        {activeTab === 'PARTICIPANTS' ? (
+    <>
+      <ToastContainer />
+      <AdminLayout
+        backHref="/admin/events"
+        title={headerTitle}
+        headerActions={
           <>
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name or email…"
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-[#1C1A17] placeholder-gray-400 outline-none focus:border-[#C84B11] bg-white"/>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 hide-scrollbar shrink-0 w-[calc(100%+2rem)] sm:w-auto">
-            {(['ALL','REGISTERED','WAITLISTED','CHECKED_IN'] as const).map(f => (
-              <button key={f} onClick={() => setStatusFilter(f)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${statusFilter === f ? 'bg-[#0E1B3D] text-white border-[#0E1B3D] shadow' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-                {f === 'ALL' ? 'All' : f.replace('_', ' ')}
-                <span className="ml-1.5 opacity-60 text-[10px]">
-                  ({f === 'ALL' ? participants.length : participants.filter(p => p.status === f).length})
-                </span>
+            {eventInfo?.status !== 'COMPLETED' && (
+              <button
+                onClick={markCompleted}
+                disabled={completing || loading}
+                className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow border disabled:opacity-50 w-full sm:w-auto ${
+                  confirmComplete
+                    ? 'bg-emerald-600 text-white border-emerald-600 animate-pulse'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                }`}>
+                {completing ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <CheckCircleIcon className="w-4 h-4" />}
+                {confirmComplete ? 'Confirm Complete?' : 'Mark Completed'}
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            {loading ? (
-              <div className="p-8 space-y-3">
-                {Array.from({length:5}).map((_,i) => <div key={i} className="h-14 bg-gray-50 rounded-xl animate-pulse"/>)}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-16">
-                <SearchIcon className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                <p className="text-gray-400 font-medium">No participants found</p>
-                {search && <button onClick={() => setSearch('')} className="mt-3 text-[#C84B11] text-sm font-bold hover:underline">Clear search</button>}
-              </div>
-            ) : (
-              // Inner Fragment replacing direct render
-              <>
-              {/* Desktop/Tablet Table View */}
-              <div className="hidden md:block overflow-x-auto w-full">
-                <table className="w-full min-w-[800px]">
-                  <thead>
-                  <tr className="border-b border-gray-50">
-                    {['S.No','Name','Email','Phone','College','Status','Registered At','Checked-In At'].map(h => (
-                      <th key={h} className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filtered.map((p, i) => (
-                    <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-4 text-xs text-gray-300 font-bold">{i+1}</td>
-                      <td className="px-5 py-4">
-                        <div>
-                          <p className="font-bold text-[#0E1B3D] text-sm">{p.name}</p>
-                          <p className="text-[10px] text-gray-400">{p.discipline}</p>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-sm text-gray-600 font-medium">{p.email}</td>
-                      <td className="px-5 py-4 text-sm text-gray-600">{p.phone}</td>
-                      <td className="px-5 py-4 text-sm text-gray-600 max-w-[160px] truncate">{p.college}</td>
-                      <td className="px-5 py-4">
-                        <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${STATUS_STYLE[p.status] || 'bg-gray-100 text-gray-500'}`}>
-                          {p.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{fmt(p.registeredAt)}</td>
-                      <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{fmt(p.checkedInAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden flex flex-col gap-4 p-4 sm:p-6 bg-gray-50/50">
-              {filtered.map(p => (
-                <div key={p._id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm relative">
-                  <div className="flex justify-between items-start mb-3 border-b border-gray-50 pb-3">
-                    <div>
-                      <h3 className="font-bold text-[#0E1B3D] text-lg leading-tight mb-0.5">{p.name}</h3>
-                      <p className="text-[10px] text-gray-400 font-medium mb-1">{p.discipline}</p>
-                      <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded-md ${STATUS_STYLE[p.status] || 'bg-gray-100 text-gray-500'}`}>{p.status.replace('_', ' ')}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 mb-3">
-                    <p className="text-xs text-gray-600 flex justify-between"><span className="text-gray-400">Email:</span> <span className="font-medium truncate ml-2">{p.email}</span></p>
-                    <p className="text-xs text-gray-600 flex justify-between"><span className="text-gray-400">Phone:</span> <span className="font-medium">{p.phone}</span></p>
-                    <p className="text-xs text-gray-600 flex justify-between"><span className="text-gray-400">College:</span> <span className="font-medium truncate ml-2 text-right max-w-[150px]">{p.college}</span></p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-50">
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Registered</p>
-                      <p className="text-[10px] text-gray-600 font-medium">{fmt(p.registeredAt)}</p>
-                    </div>
-                    <div className={`${p.checkedIn ? 'bg-emerald-50' : 'bg-gray-50'} rounded-lg p-2 text-center`}>
-                      <p className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${p.checkedIn ? 'text-emerald-600/60' : 'text-gray-400'}`}>Checked-In</p>
-                      <p className={`text-[10px] font-medium ${p.checkedIn ? 'text-emerald-600' : 'text-gray-500'}`}>{fmt(p.checkedInAt)}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            </>
             )}
-          </div>
-          {!loading && filtered.length > 0 && (
-            <div className="px-5 py-3.5 border-t border-gray-50 flex items-center justify-between">
-              <p className="text-xs text-gray-400">Showing <span className="font-bold text-gray-600">{filtered.length}</span> of <span className="font-bold text-gray-600">{participants.length}</span> participants</p>
-              <button onClick={downloadCSV} disabled={downloading}
-                className="text-xs font-bold text-[#C84B11] hover:underline flex items-center gap-1 disabled:opacity-50">
-                <DownloadIcon className="w-3 h-3" /> Export filtered list
-              </button>
+            <Link href={`/admin/events/${eventId}/edit`}
+              className="flex items-center justify-center gap-2 border border-[#0E1B3D]/30 text-[#0E1B3D] hover:bg-[#0E1B3D] hover:text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm bg-white w-full sm:w-auto">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Edit Details
+            </Link>
+            <button
+              onClick={downloadCSV}
+              disabled={downloading || loading || participants.length === 0}
+              title={participants.length === 0 ? 'No participants to download' : 'Download CSV'}
+              className="flex items-center justify-center gap-2 bg-[#0E1B3D] hover:bg-[#1a2d5a] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto">
+              {downloading ? (
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              ) : <DownloadIcon className="w-4 h-4" />} Download CSV
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-6">
+          {/* Stats Grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {Array.from({length:5}).map((_,i) => <div key={i} className="h-24 bg-white rounded-2xl animate-pulse border border-gray-100"/>)}
+            </div>
+          ) : stats && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <StatCard label="Total Capacity" val={eventInfo?.capacity ?? 0} color="text-[#0E1B3D]"/>
+              <StatCard label="Registered" val={stats.registered} color="text-[#C84B11]"/>
+              <StatCard label="Waitlisted" val={stats.waitlisted} color="text-amber-500"/>
+              <StatCard label="Checked-In" val={stats.checkedIn} color="text-emerald-600"/>
+              {eventInfo?.status === 'COMPLETED' ? (
+                <StatCard label="No-Show" val={stats.noShow} color="text-red-500" sub="Registered but absent"/>
+              ) : (
+                <StatCard label="Pending" val={stats.noShow} color="text-gray-400" sub="Haven't checked in yet"/>
+              )}
             </div>
           )}
+
+          {(eventInfo?.status === 'COMPLETED' || (eventInfo?.photos?.length || 0) > 0) && (
+            <div className="flex bg-white rounded-xl p-1 mb-6 border border-gray-100 w-fit shadow-sm">
+              <button onClick={() => setActiveTab('PARTICIPANTS')} className={`px-5 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'PARTICIPANTS' ? 'bg-[#0E1B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#0E1B3D] hover:bg-gray-50'}`}>Participants</button>
+              <button onClick={() => setActiveTab('MEDIA')} className={`px-5 py-2 text-sm font-bold rounded-lg transition-all ${activeTab === 'MEDIA' ? 'bg-[#0E1B3D] text-white shadow-sm' : 'text-gray-500 hover:text-[#0E1B3D] hover:bg-gray-50'}`}>Media &amp; Feedback</button>
+            </div>
+          )}
+
+          {activeTab === 'PARTICIPANTS' ? (
+            <>
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1 min-w-[200px]">
+                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="Search by name or email…"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm text-[#1C1A17] placeholder-gray-400 outline-none focus:border-[#C84B11] bg-white"/>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 hide-scrollbar shrink-0 w-[calc(100%+2rem)] sm:w-auto">
+                  {(['ALL','REGISTERED','WAITLISTED','CHECKED_IN'] as const).map(f => (
+                    <button key={f} onClick={() => setStatusFilter(f)}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${statusFilter === f ? 'bg-[#0E1B3D] text-white border-[#0E1B3D] shadow' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                      {f === 'ALL' ? 'All' : f.replace('_', ' ')}
+                      <span className="ml-1.5 opacity-60 text-[10px]">
+                        ({f === 'ALL' ? participants.length : participants.filter(p => p.status === f).length})
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                  {loading ? (
+                    <div className="p-8 space-y-3">
+                      {Array.from({length:5}).map((_,i) => <div key={i} className="h-14 bg-gray-50 rounded-xl animate-pulse"/>)}
+                    </div>
+                  ) : filtered.length === 0 ? (
+                    <div className="text-center py-16">
+                      <SearchIcon className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                      <p className="text-gray-400 font-medium">No participants found</p>
+                      {search && <button onClick={() => setSearch('')} className="mt-3 text-[#C84B11] text-sm font-bold hover:underline">Clear search</button>}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Desktop/Tablet Table View */}
+                      <div className="hidden md:block overflow-x-auto w-full">
+                        <table className="w-full min-w-[800px]">
+                          <thead>
+                            <tr className="border-b border-gray-50">
+                              {['S.No','Name','Email','Phone','College','Status','Checked-In','Registered At','Checked-In At'].map(h => (
+                                <th key={h} className="text-left px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {filtered.map((p, i) => (
+                              <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
+                                <td className="px-5 py-4 text-xs text-gray-300 font-bold">{i+1}</td>
+                                <td className="px-5 py-4">
+                                  <div>
+                                    <p className="font-bold text-[#0E1B3D] text-sm">{p.name}</p>
+                                    <p className="text-[10px] text-gray-400">{p.discipline}</p>
+                                  </div>
+                                </td>
+                                <td className="px-5 py-4 text-sm text-gray-600 font-medium">{p.email}</td>
+                                <td className="px-5 py-4 text-sm text-gray-600">{p.phone}</td>
+                                <td className="px-5 py-4 text-sm text-gray-600 max-w-[160px] truncate">{p.college}</td>
+                                <td className="px-5 py-4">
+                                  <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${STATUS_STYLE[p.status] || 'bg-gray-100 text-gray-500'}`}>
+                                    {p.status.replace('_', ' ')}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-4">
+                                  {p.checkedIn ? (
+                                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600" title="Checked in">
+                                      <CheckCircleIcon className="w-4 h-4" />
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-300" title="Not checked in">
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                                      </svg>
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{fmt(p.registeredAt)}</td>
+                                <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{fmt(p.checkedInAt)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile Card View */}
+                      <div className="md:hidden flex flex-col gap-4 p-4 sm:p-6 bg-gray-50/50">
+                        {filtered.map(p => (
+                          <div key={p._id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm relative">
+                            <div className="flex justify-between items-start mb-3 border-b border-gray-50 pb-3">
+                              <div>
+                                <h3 className="font-bold text-[#0E1B3D] text-lg leading-tight mb-0.5">{p.name}</h3>
+                                <p className="text-[10px] text-gray-400 font-medium mb-1">{p.discipline}</p>
+                                <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded-md ${STATUS_STYLE[p.status] || 'bg-gray-100 text-gray-500'}`}>{p.status.replace('_', ' ')}</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2 mb-3">
+                              <p className="text-xs text-gray-600 flex justify-between"><span className="text-gray-400">Email:</span> <span className="font-medium truncate ml-2">{p.email}</span></p>
+                              <p className="text-xs text-gray-600 flex justify-between"><span className="text-gray-400">Phone:</span> <span className="font-medium">{p.phone}</span></p>
+                              <p className="text-xs text-gray-600 flex justify-between"><span className="text-gray-400">College:</span> <span className="font-medium truncate ml-2 text-right max-w-[150px]">{p.college}</span></p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-50">
+                              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Registered</p>
+                                <p className="text-[10px] text-gray-600 font-medium">{fmt(p.registeredAt)}</p>
+                              </div>
+                              <div className={`${p.checkedIn ? 'bg-emerald-50' : 'bg-gray-50'} rounded-lg p-2 text-center`}>
+                                <p className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${p.checkedIn ? 'text-emerald-600/60' : 'text-gray-400'}`}>Checked-In</p>
+                                <div className="flex items-center justify-center gap-1.5">
+                                  {p.checkedIn ? (
+                                    <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-600" />
+                                  ) : (
+                                    <svg className="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                                    </svg>
+                                  )}
+                                  <p className={`text-[10px] font-medium ${p.checkedIn ? 'text-emerald-600' : 'text-gray-500'}`}>{fmt(p.checkedInAt)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {!loading && filtered.length > 0 && (
+                  <div className="px-5 py-3.5 border-t border-gray-50 flex items-center justify-between">
+                    <p className="text-xs text-gray-400">Showing <span className="font-bold text-gray-600">{filtered.length}</span> of <span className="font-bold text-gray-600">{participants.length}</span> participants</p>
+                    <button onClick={downloadCSV} disabled={downloading || participants.length === 0}
+                      className="text-xs font-bold text-[#C84B11] hover:underline flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                      <DownloadIcon className="w-3 h-3" /> Export filtered list
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <MediaTab eventId={eventId} token={token || ''} />
+          )}
         </div>
-        </>
-        ) : (
-          <MediaTab eventId={eventId} token={token || ''} />
-        )}
-      </div>
-    </AdminLayout>
+      </AdminLayout>
+    </>
   );
 }
-
-
-
-

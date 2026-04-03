@@ -1,14 +1,149 @@
+const crypto = require('crypto');
 const Registration = require('../models/Registration');
+const RegistrationToken = require('../models/RegistrationToken');
 const Event = require('../models/Event');
 const Feedback = require('../models/Feedback');
-const { generateHash, generateQRCode } = require('../utils/qrHelper');
-const { sendRegistrationEmail } = require('../utils/mailer');
+const CancellationAuditLog = require('../models/CancellationAuditLog');
+const { computeQrExpiry, generateQRToken, generateRegistrationQR } = require('../services/qrSecurityService');
+const { registerIssuedNonce, denylistNonce } = require('../services/nonceStoreService');
+const { broadcastAlert } = require('../services/alertService');
+const {
+  sendRegistrationEmail,
+  sendCancellationEmail,
+  sendWaitlistPromotionEmail,
+  sendSmsNotification,
+} = require('../utils/mailer');
+
+const activeRegistrationFilter = { cancelledAt: null };
+
+const issueQrForRegistration = async (registration, event) => {
+  const issuedAt = new Date();
+  const expiresAt = computeQrExpiry(event);
+  const nonce = crypto.randomUUID();
+  const token = generateQRToken();
+  const { qrCode } = await generateRegistrationQR(token);
+
+  await RegistrationToken.findOneAndDelete({ registrationId: registration._id });
+  await RegistrationToken.create({
+    token,
+    registrationId: registration._id,
+    studentId: registration.user,
+    eventId: event._id,
+    issuedAt,
+    expiresAt,
+    nonce,
+    used: false,
+  });
+
+  registration.qrCode = qrCode;
+  registration.qrEncryptedPayload = null;
+  registration.qrNonce = nonce;
+  registration.qrIssuedAt = issuedAt;
+  registration.qrExpiresAt = expiresAt;
+  registration.qrInvalidatedAt = null;
+
+  await registerIssuedNonce({
+    nonce,
+    registrationId: registration._id,
+    studentId: registration.user,
+    eventId: event._id,
+    expiresAt,
+  });
+
+  return { qrCode, token, nonce, expiresAt };
+};
+
+const canManageRegistration = (actor, registration) => {
+  if (!actor) return false;
+  if (['admin', 'superAdmin'].includes(actor.role)) return true;
+  const registrationUserId = registration.user?._id ? registration.user._id.toString() : registration.user.toString();
+  return registrationUserId === actor._id.toString();
+};
+
+const cancellationDeadlinePassed = (event) => {
+  const deadline = new Date(event.dateTime);
+  deadline.setHours(0, 0, 0, 0);
+  return new Date() >= deadline;
+};
+
+const promoteWaitlistedStudent = async (event) => {
+  const waitlisted = await Registration.findOne({
+    event: event._id,
+    status: 'WAITLISTED',
+    ...activeRegistrationFilter,
+  }).sort({ createdAt: 1 }).populate('user', 'name email phone');
+
+  if (!waitlisted) return null;
+
+  waitlisted.status = 'REGISTERED';
+  const qrInfo = await issueQrForRegistration(waitlisted, event);
+  await waitlisted.save();
+
+  event.registeredCount = (event.registeredCount || 0) + 1;
+  event.waitlistCount = Math.max(0, (event.waitlistCount || 1) - 1);
+
+  return { waitlisted, qrInfo };
+};
+
+const notifyCancellation = ({ registration, reason }) => {
+  sendCancellationEmail({
+    name: registration.user.name,
+    email: registration.user.email,
+    eventName: registration.event.name,
+  }).catch(err => console.error('Cancellation email error:', err));
+
+  sendSmsNotification({
+    phone: registration.user.phone,
+    message: `Your registration for ${registration.event.name} has been cancelled.`,
+  }).catch(err => console.error('Cancellation SMS error:', err));
+
+  broadcastAlert('registration-cancelled', {
+    type: 'registration.cancelled',
+    registrationId: registration._id,
+    studentId: registration.user._id,
+    eventId: registration.event._id,
+    studentName: registration.user.name,
+    eventName: registration.event.name,
+    cancelledAt: registration.cancelledAt?.toISOString() || new Date().toISOString(),
+    reason: reason || '',
+    message: `${registration.user.name} has cancelled. Participant list updated.`,
+  });
+};
+
+const notifyPromotion = ({ promoted, event, qrCode }) => {
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  const eventPath = `${appUrl}/events/${event.eventId}`;
+
+  sendWaitlistPromotionEmail({
+    name: promoted.user.name,
+    email: promoted.user.email,
+    eventName: event.name,
+    signInLink: `${appUrl}/login`,
+    paymentLink: eventPath,
+    qrCodeBase64: qrCode,
+  }).catch(err => console.error('Waitlist promotion email error:', err));
+
+  sendSmsNotification({
+    phone: promoted.user.phone,
+    message: `A seat is available for ${event.name}. Sign in to confirm and complete payment.`,
+  }).catch(err => console.error('Waitlist promotion SMS error:', err));
+
+  broadcastAlert('participant-promoted', {
+    type: 'registration.promoted',
+    registrationId: promoted._id,
+    studentId: promoted.user._id,
+    eventId: event._id,
+    studentName: promoted.user.name,
+    eventName: event.name,
+    message: `${promoted.user.name} was promoted from the waitlist for ${event.name}.`,
+  });
+};
 
 // @desc    Register user for an event
 // @route   POST /api/registrations
 const registerForEvent = async (req, res) => {
   try {
-    const { eventId, selectedDays } = req.body;  // selectedDays optional, for multi-day events
+    const { eventId, selectedDays } = req.body;
     const user = req.user;
 
     const event = await Event.findOne({ eventId });
@@ -16,41 +151,32 @@ const registerForEvent = async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Domain validation
     const userDomain = user.email.split('@')[1];
     if (userDomain !== event.collegeDomain && event.collegeDomain !== 'ALL') {
-      return res.status(403).json({
-        message: `The event is for ${event.collegeName} students`
-      });
+      return res.status(403).json({ message: `The event is for ${event.collegeName} students` });
     }
 
-    // Duplicate check
-    const existingRegistration = await Registration.findOne({ user: user._id, event: event._id });
+    const existingRegistration = await Registration.findOne({ user: user._id, event: event._id, cancelledAt: null });
     if (existingRegistration) {
       return res.status(400).json({ message: 'You are already registered or waitlisted for this event.' });
     }
 
-    // Seat capacity check
     let status = 'REGISTERED';
     if (event.registeredCount >= event.capacity) {
       status = 'WAITLISTED';
       event.waitlistCount = (event.waitlistCount || 0) + 1;
-      await event.save();
     } else {
       event.registeredCount += 1;
-      await event.save();
     }
 
-    // Multi-day event support: compute selected days & amount
     const isMultiDay = Array.isArray(event.days) && event.days.length > 0;
     const validDays = isMultiDay && Array.isArray(selectedDays) && selectedDays.length > 0
-      ? selectedDays.filter(d => event.days.some(ed => ed.day === d))
+      ? selectedDays.filter(day => event.days.some(eventDay => eventDay.day === day))
       : [];
     const dayCount = validDays.length || 1;
     const perDayAmount = event.amount || 500;
     const totalAmount = isMultiDay ? perDayAmount * dayCount : perDayAmount;
 
-    // Create registration first to get _id
     const registration = await Registration.create({
       user: user._id,
       event: event._id,
@@ -59,29 +185,16 @@ const registerForEvent = async (req, res) => {
       totalAmountPaid: status === 'REGISTERED' ? totalAmount : 0,
     });
 
-    // Generate QR code only for REGISTERED (not waitlisted)
     let qrCodeDataUrl = null;
     if (status === 'REGISTERED') {
-      const secureHash = generateHash(user._id.toString(), event._id.toString(), registration._id.toString());
-      const qrPayload = {
-        userId: user._id,
-        eventId: event._id,
-        registrationId: registration._id,
-        timestamp: Date.now(),
-        secureHash,
-        // Multi-day: include which days were selected
-        ...(isMultiDay && validDays.length > 0 && {
-          selectedDays: validDays,
-          totalAmountPaid: totalAmount,
-        }),
-      };
-      qrCodeDataUrl = await generateQRCode(qrPayload);
-      registration.qrCode = qrCodeDataUrl;
-      registration.secureHash = secureHash;
+      const qrInfo = await issueQrForRegistration(registration, event);
+      qrCodeDataUrl = qrInfo.qrCode;
+      registration.secureHash = null;
       await registration.save();
     }
 
-    // Send email asynchronously (don't block response)
+    await event.save();
+
     sendRegistrationEmail({
       name: user.name,
       email: user.email,
@@ -102,9 +215,8 @@ const registerForEvent = async (req, res) => {
       qrCode: qrCodeDataUrl,
       selectedDays: registration.selectedDays,
       totalAmountPaid: registration.totalAmountPaid,
-      registration: { _id: registration._id, status: registration.status }
+      registration: { _id: registration._id, status: registration.status },
     });
-
   } catch (error) {
     if (error.code === 11000) {
       return res.status(400).json({ message: 'You are already registered for this event.' });
@@ -118,13 +230,10 @@ const registerForEvent = async (req, res) => {
 const checkRegistration = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const user = req.user;
-
     const event = await Event.findOne({ eventId });
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
-    const registration = await Registration.findOne({ user: user._id, event: event._id });
-
+    const registration = await Registration.findOne({ user: req.user._id, event: event._id, cancelledAt: null });
     if (registration) {
       return res.status(200).json({
         isRegistered: true,
@@ -139,24 +248,26 @@ const checkRegistration = async (req, res) => {
   }
 };
 
-// @desc    Get all registrations for logged-in user (profile page)
+// @desc    Get all registrations for logged-in user
 // @route   GET /api/registrations/my
 const getMyRegistrations = async (req, res) => {
   try {
-    const registrations = await Registration.find({ user: req.user._id })
+    const registrations = await Registration.find({ user: req.user._id, cancelledAt: null })
       .populate('event', 'name collegeName city venue dateTime endDateTime status eventId amount')
       .sort({ createdAt: -1 });
 
-    const submittedFeedback = await Feedback.find({ studentId: req.user._id })
-      .select('eventId')
-      .lean();
+    const SeatBooking = require('../models/SeatBooking');
+    const mySeats = await SeatBooking.find({ userId: req.user._id, status: 'confirmed' }).lean();
+    const seatMap = new Map(mySeats.map(s => [s.eventId, s.seatId]));
 
+    const submittedFeedback = await Feedback.find({ studentId: req.user._id }).select('eventId').lean();
     const submittedFeedbackSet = new Set(submittedFeedback.map(item => item.eventId));
 
     res.status(200).json(
       registrations.map(registration => ({
         ...registration.toObject(),
         hasSubmittedFeedback: submittedFeedbackSet.has(registration.event?.eventId),
+        seatNumber: seatMap.get(registration.event?.eventId) || null,
       }))
     );
   } catch (error) {
@@ -164,131 +275,186 @@ const getMyRegistrations = async (req, res) => {
   }
 };
 
+const cancelRegistrationCore = async ({ registrationId, reason, actor }) => {
+  const registration = await Registration.findById(registrationId)
+    .populate('event')
+    .populate('user', 'name email phone');
+
+  if (!registration) {
+    const error = new Error('Registration not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (!canManageRegistration(actor, registration)) {
+    const error = new Error('You are not authorized to cancel this registration.');
+    error.statusCode = 403;
+    throw error;
+  }
+  if (!['REGISTERED', 'WAITLISTED'].includes(registration.status) || registration.cancelledAt) {
+    const error = new Error(`Cannot cancel a registration with status: ${registration.status}.`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const event = registration.event;
+  if (!event) {
+    const error = new Error('Associated event not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (event.status !== 'UPCOMING') {
+    const error = new Error('Cancellation is only allowed for upcoming events.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (cancellationDeadlinePassed(event)) {
+    const error = new Error('Cancellation deadline has passed. Registrations cannot be cancelled on or after the day of the event (after 12:00 AM).');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const wasRegistered = registration.status === 'REGISTERED';
+  const previousStatus = registration.status;
+  const cancelledAt = new Date();
+  await RegistrationToken.updateMany(
+    { registrationId: registration._id, used: false },
+    { $set: { used: true, usedAt: cancelledAt } }
+  );
+
+  if (registration.qrNonce) {
+    await denylistNonce({
+      nonce: registration.qrNonce,
+      registrationId: registration._id,
+      studentId: registration.user._id,
+      eventId: event._id,
+      expiresAt: registration.qrExpiresAt,
+      reason: 'CANCELLED',
+      metadata: { cancelledAt: cancelledAt.toISOString(), registrationId: registration._id.toString() },
+    });
+  }
+
+  registration.status = 'CANCELLED';
+  registration.cancelledAt = cancelledAt;
+  registration.cancellationReason = reason || registration.cancellationReason || 'Cancelled by user';
+  registration.cancelledBy = actor._id;
+  registration.qrInvalidatedAt = cancelledAt;
+
+  let promoted = null;
+
+  if (wasRegistered) {
+    const refundAmount = Math.max(0, ((event.amount || 500) - 100) * ((registration.selectedDays?.length || 1)));
+    
+    if (registration.razorpay_payment_id && refundAmount > 0) {
+      try {
+        const Razorpay = require('razorpay');
+        const razorpay = new Razorpay({
+          key_id: process.env.RAZORPAY_KEY_ID,
+          key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
+
+        const refund = await razorpay.payments.refund(registration.razorpay_payment_id, {
+          amount: refundAmount * 100, // Razorpay takes paisa
+          notes: { reason: reason || 'User initiated cancellation' }
+        });
+        
+        registration.refundStatus = 'PROCESSED';
+        registration.razorpay_refund_id = refund.id;
+      } catch (err) {
+        console.error('Razorpay refund failed:', err);
+        registration.refundStatus = 'FAILED';
+      }
+    } else {
+      registration.refundStatus = 'NOT_APPLICABLE';
+    }
+
+    const SeatBooking = require('../models/SeatBooking');
+    await SeatBooking.deleteOne({ eventId: event.eventId, userId: registration.user._id });
+    event.registeredCount = Math.max(0, (event.registeredCount || 1) - 1);
+    promoted = await promoteWaitlistedStudent(event);
+  } else {
+    registration.refundStatus = 'NOT_APPLICABLE';
+    event.waitlistCount = Math.max(0, (event.waitlistCount || 1) - 1);
+  }
+
+  await registration.save();
+  await event.save();
+
+  await CancellationAuditLog.create({
+    registrationId: registration._id,
+    studentId: registration.user._id,
+    eventId: event._id,
+    cancelledAt,
+    cancelledBy: actor._id,
+    reason: registration.cancellationReason,
+    qrNonce: registration.qrNonce || '',
+    previousStatus,
+  });
+
+  notifyCancellation({ registration, reason: registration.cancellationReason });
+  if (promoted) {
+    notifyPromotion({ promoted: promoted.waitlisted, event, qrCode: promoted.qrInfo.qrCode });
+  }
+
+  return {
+    registration,
+    refundAmount: wasRegistered ? Math.max(0, ((event.amount || 500) - 100) * ((registration.selectedDays?.length || 1))) : 0,
+  };
+};
+
 // @desc    Cancel a registration
 // @route   DELETE /api/registrations/:registrationId/cancel
 const cancelRegistration = async (req, res) => {
   try {
-    const { registrationId } = req.params;
-    const user = req.user;
-
-    // Fetch the registration and populate event
-    const registration = await Registration.findById(registrationId).populate('event');
-    if (!registration) {
-      return res.status(404).json({ message: 'Registration not found.' });
-    }
-
-    // Ensure it belongs to the requesting user
-    if (registration.user.toString() !== user._id.toString()) {
-      return res.status(403).json({ message: 'You are not authorized to cancel this registration.' });
-    }
-
-    // Can only cancel REGISTERED or WAITLISTED
-    if (!['REGISTERED', 'WAITLISTED'].includes(registration.status)) {
-      return res.status(400).json({ message: `Cannot cancel a registration with status: ${registration.status}.` });
-    }
-
-    const event = registration.event;
-    if (!event) {
-      return res.status(404).json({ message: 'Associated event not found.' });
-    }
-
-    // Policy: event must be UPCOMING
-    if (event.status !== 'UPCOMING') {
-      return res.status(400).json({ message: 'Cancellation is only allowed for upcoming events.' });
-    }
-
-    // Policy: cancellation must be before 12:00 AM (midnight) on the event day
-    const eventDate = new Date(event.dateTime);
-    const deadline = new Date(eventDate);
-    deadline.setHours(0, 0, 0, 0); // midnight = start of the event day
-    const now = new Date();
-    if (now >= deadline) {
-      return res.status(400).json({
-        message: 'Cancellation deadline has passed. Registrations cannot be cancelled on or after the day of the event (after 12:00 AM).'
-      });
-    }
-
-    const wasRegistered = registration.status === 'REGISTERED';
-    const wasWaitlisted = registration.status === 'WAITLISTED';
-    const eventAmount = event.amount || 500;
-    const cancellationFee = 100;
-    // Multi-day: refund = (500 - 100) * number of days selected
-    const dayCount = registration.selectedDays && registration.selectedDays.length > 0
-      ? registration.selectedDays.length : 1;
-    const refundAmount = Math.max(0, (eventAmount - cancellationFee) * dayCount);  // ₹400 × days
-
-    // Mark as cancelled
-    registration.status = 'CANCELLED';
-    registration.cancelledAt = new Date();
-
-    if (wasRegistered) {
-      // Registered students paid → issue refund (or mark pending until Razorpay is live)
-      registration.refundStatus = 'PENDING'; // will be updated to PROCESSED by Razorpay webhook
-
-      // TODO: When Razorpay is connected, uncomment the block below:
-      // const razorpay = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
-      // if (registration.razorpayPaymentId) {
-      //   try {
-      //     const refund = await razorpay.payments.refund(registration.razorpayPaymentId, { amount: refundAmount * 100 });
-      //     registration.refundId = refund.id;
-      //     registration.refundStatus = 'PROCESSED';
-      //   } catch (err) {
-      //     console.error('Razorpay refund error:', err);
-      //     registration.refundStatus = 'FAILED';
-      //   }
-      // }
-
-      // Free seat if one was booked
-      const SeatBooking = require('../models/SeatBooking');
-      await SeatBooking.deleteOne({ eventId: event.eventId, userId: user._id });
-
-      // Decrement registered count
-      event.registeredCount = Math.max(0, (event.registeredCount || 1) - 1);
-
-      // Promote first waitlisted student (if any)
-      const SeatBookingModel = require('../models/SeatBooking'); // already imported above, harmless
-      const waitlisted = await Registration.findOne({ event: event._id, status: 'WAITLISTED' }).sort({ createdAt: 1 });
-      if (waitlisted) {
-        waitlisted.status = 'REGISTERED';
-        // Generate QR for promoted student
-        const { generateHash, generateQRCode } = require('../utils/qrHelper');
-        const secureHash = generateHash(waitlisted.user.toString(), event._id.toString(), waitlisted._id.toString());
-        const qrPayload = {
-          userId: waitlisted.user,
-          eventId: event._id,
-          registrationId: waitlisted._id,
-          timestamp: Date.now(),
-          secureHash,
-        };
-        waitlisted.qrCode = await generateQRCode(qrPayload);
-        waitlisted.secureHash = secureHash;
-        await waitlisted.save();
-        event.registeredCount = (event.registeredCount || 0) + 1;
-        event.waitlistCount = Math.max(0, (event.waitlistCount || 1) - 1);
-      }
-
-    } else if (wasWaitlisted) {
-      // Waitlisted students never paid → no refund needed
-      registration.refundStatus = 'NOT_APPLICABLE';
-      event.waitlistCount = Math.max(0, (event.waitlistCount || 1) - 1);
-    }
-
-    await registration.save();
-    await event.save();
-
-    res.status(200).json({
-      message: wasRegistered
-        ? `Registration cancelled. A refund of ₹${refundAmount} (after ₹${cancellationFee} fee per day) will be processed to your original payment method within 5–7 business days.`
-        : 'Waitlist entry cancelled successfully.',
-      status: 'CANCELLED',
-      refundStatus: registration.refundStatus,
-      refundAmount: wasRegistered ? refundAmount : 0,
-      cancellationFee: wasRegistered ? cancellationFee * dayCount : 0,
+    const result = await cancelRegistrationCore({
+      registrationId: req.params.registrationId,
+      reason: req.body?.reason,
+      actor: req.user,
     });
 
+    res.status(200).json({
+      message: result.registration.status === 'CANCELLED'
+        ? 'Registration cancelled successfully.'
+        : 'Cancellation completed.',
+      status: 'CANCELLED',
+      refundStatus: result.registration.refundStatus,
+      refundAmount: result.refundAmount,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 };
 
-module.exports = { registerForEvent, checkRegistration, getMyRegistrations, cancelRegistration };
+// @desc    Cancel via body payload
+// @route   POST /api/registration/cancel
+const cancelRegistrationByBody = async (req, res) => {
+  try {
+    const { registrationId, reason } = req.body;
+    if (!registrationId) {
+      return res.status(400).json({ message: 'registrationId is required.' });
+    }
+
+    const result = await cancelRegistrationCore({
+      registrationId,
+      reason,
+      actor: req.user,
+    });
+
+    res.status(200).json({
+      message: 'Registration cancelled successfully.',
+      registrationId,
+      status: 'CANCELLED',
+      refundStatus: result.registration.refundStatus,
+      refundAmount: result.refundAmount,
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  registerForEvent,
+  checkRegistration,
+  getMyRegistrations,
+  cancelRegistration,
+  cancelRegistrationByBody,
+};
