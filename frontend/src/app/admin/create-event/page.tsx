@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -10,7 +10,7 @@ const VenueMap = dynamic(() => import('@/components/VenueMap'), { ssr: false });
 
 type Step = 1 | 2 | 3 | 4 | 5;
 type LayoutFormState = Omit<HallLayoutData, 'total_rows' | 'seats_per_row'> & { total_rows: number | ''; seats_per_row: number | '' };
-type SpeakerForm = { name: string; role: string; company: string; bio: string };
+type SpeakerForm = { title: string; name: string; role: string; company: string; linkedIn: string; bio: string };
 type AgendaItemForm = { time: string; title: string; duration: string; speaker: string };
 type DayAgendaForm = { day: number; label: string; agenda: AgendaItemForm[] };
 type TimeOption = { value: string; label: string; duration: string };
@@ -25,7 +25,7 @@ const defaultLayout: LayoutFormState = {
 const defaultForm = {
   name: '', collegeName: '', collegeDomain: '', city: '', venue: '',
   dateTime: '', endDateTime: '', capacity: '', description: '', topics: '', amount: '500',
-  speakers: [{ name: '', role: '', company: '', bio: '' }] as SpeakerForm[],
+  speakers: [{ title: '', name: '', role: '', company: '', linkedIn: '', bio: '' }] as SpeakerForm[],
   agenda: [{ time: '', title: '', duration: '', speaker: '' }] as AgendaItemForm[],
   // Multi-day: array of days, each with their own agenda
   days: [] as DayAgendaForm[],
@@ -76,7 +76,7 @@ function buildTimeOptions(startValue: string, endValue: string) {
   const options: TimeOption[] = [];
   let current = new Date(start);
 
-  while (current < singleDayEnd) {
+  while (current <= singleDayEnd) {
     const next = new Date(Math.min(current.getTime() + 15 * 60 * 1000, singleDayEnd.getTime()));
     const durationMinutes = Math.max(15, Math.round((next.getTime() - current.getTime()) / 60000));
     options.push({
@@ -106,15 +106,52 @@ function getDurationFromRange(start: string, end: string, options: TimeOption[])
 }
 
 // Defined OUTSIDE the page component to prevent remount on every keystroke
-function FormInput({ label, type = 'text', placeholder = '', value, onChange }: {
-  label: string; type?: string; placeholder?: string; value: string; onChange: (v: string) => void;
+function FormInput({ label, type = 'text', placeholder = '', value, onChange, required = false }: {
+  label: string; type?: string; placeholder?: string; value: string; onChange: (v: string) => void; required?: boolean;
 }) {
   return (
     <div>
-      <label className={fieldLabelClassName}>{label}</label>
-      <input type={type} placeholder={placeholder} value={value}
+      <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1 mb-1.5 block">{label}</label>
+      <input type={type} placeholder={placeholder} value={value} required={required}
         onChange={e => onChange(e.target.value)}
-        className={formFieldClassName} />
+        className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors" />
+    </div>
+  );
+}
+
+function ComboboxInput({ label, placeholder = '', value, options, onChange, required = false }: {
+  label: string; placeholder?: string; value: string; options: string[]; onChange: (v: string) => void; required?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setIsOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter(opt => opt.toLowerCase().includes(value.toLowerCase()) && opt !== value);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1 mb-1.5 block">{label}</label>
+      <input type="text" placeholder={placeholder} value={value} required={required}
+        onChange={e => { onChange(e.target.value); setIsOpen(true); }}
+        onFocus={() => setIsOpen(true)}
+        className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors" />
+      {isOpen && filteredOptions.length > 0 && (
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-xl bg-white border border-[#E2D8CC] shadow-xl py-1">
+          {filteredOptions.map((option, idx) => (
+            <li key={idx} onClick={() => { onChange(option); setIsOpen(false); }}
+              className="cursor-pointer px-4 py-2 text-sm text-[#1C1A17] hover:bg-[#F2EBE0] hover:text-[#C84B11] font-semibold transition-colors">
+              {option}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -132,6 +169,56 @@ export default function CreateEventPage() {
   const [selectedHallId, setSelectedHallId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [locations, setLocations] = useState<{city: string, collegeName: string, collegeDomain: string}[]>([]);
+  const [apiColleges, setApiColleges] = useState<string[]>([]);
+  const [linkedInStatus, setLinkedInStatus] = useState<Record<number, 'idle' | 'fetching' | 'success' | 'failed'>>({});
+
+  const predefinedCities = [
+    'Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli', 'Tiruppur', 'Vellore', 'Erode',
+    'Thoothukudi', 'Thanjavur', 'Dindigul', 'Ranipet', 'Sivakasi', 'Kumbakonam', 'Nagercoil', 'Kanchipuram',
+    'Cuddalore', 'Hosur', 'Villupuram', 'Karur', 'Udhagamandalam (Ooty)', 'Nagapattinam', 'Pudukkottai',
+    'Ramanathapuram', 'Krishnagiri', 'Namakkal', 'Ariyalur', 'Perambalur', 'Thiruvallur', 'Virudhunagar',
+    'Sivaganga', 'Tiruvannamalai', 'Dharmapuri', 'Theni', 'Kallakurichi', 'Tenkasi', 'Chengalpattu',
+    'Mayiladuthurai', 'Tirupattur', 'Palani', 'Pollachi', 'Karaikudi', 'Ambattur', 'Avadi', 'Tambaram',
+    'Tiruvottiyur', 'Mettur', 'Bhavani', 'Gobichettipalayam', 'Vaniyambadi', 'Arakkonam', 'Gudiyatham', 'Ambur',
+    'Tiruttani', 'Ponneri', 'Tirunelveli (Town)', 'Manamadurai', 'Paramakudi', 'Rameswaram', 'Kodaikanal',
+    'Vatlugundu', 'Srivilliputhur', 'Sattur', 'Kovilpatti', 'Tiruchendur', 'Sankarankovil', 'Tenkasi (Town)',
+    'Courtallam', 'Nanjilnad / Marthandam', 'Padmanabhapuram', 'Colachel', 'Papanasam', 'Mannargudi', 'Tiruvarur',
+    'Needamangalam', 'Sirkazhi', 'Velankanni', 'Chidambaram', 'Panruti', 'Virudhachalam', 'Tindivanam', 'Gingee',
+    'Vandavasi', 'Cheyyar', 'Maduranthagam', 'Maraimalai Nagar', 'Poonamallee', 'Sriperumbudur', 'Uthiramerur',
+    'Periyakulam', 'Bodinayakanur', 'Oddanchatram', 'Musiri', 'Lalgudi', 'Aruppukkottai', 'Rasipuram',
+    'Tiruchengode', 'Sankari', 'Yercaud'
+  ];
+
+  useEffect(() => {
+    if (!form.city) {
+      setApiColleges([]);
+      return;
+    }
+    fetch(`http://universities.hipolabs.com/search?country=india&name=${encodeURIComponent(form.city)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setApiColleges(data.map((u: any) => u.name));
+        }
+      })
+      .catch(() => setApiColleges([]));
+  }, [form.city]);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/events')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setLocations(data.map(e => ({ city: e.city || '', collegeName: e.collegeName || '', collegeDomain: e.collegeDomain || '' })));
+        } else if (data.events && Array.isArray(data.events)) {
+           setLocations(data.events.map((e: any) => ({ city: e.city || '', collegeName: e.collegeName || '', collegeDomain: e.collegeDomain || '' })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+
 
   useEffect(() => {
     if (step === 4 && token) {
@@ -193,6 +280,38 @@ export default function CreateEventPage() {
       return key === 'name' ? replaceSpeakerReferences(nextForm, oldName, val) : nextForm;
     });
   };
+
+  const fetchLinkedInData = async (i: number, url: string) => {
+    const LINKEDIN_RE = /^https?:\/\/(?:www\.|[a-z]{2,3}\.)?linkedin\.com\/in\/[\w\-.]+(?:\/.*)?$/;
+    if (!url || !LINKEDIN_RE.test(url)) return;
+    setLinkedInStatus(prev => ({ ...prev, [i]: 'fetching' }));
+    try {
+      const res = await fetch('http://localhost:5000/api/speakers/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ linkedinUrl: url }),
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        const { name, role, organization, short_bio } = json.data;
+        setForm(prev => {
+          const speakers = [...prev.speakers];
+          const sp = { ...speakers[i] };
+          if (name) sp.name = name;
+          if (role) sp.role = role;
+          if (organization) sp.company = organization;
+          if (short_bio) sp.bio = short_bio;
+          speakers[i] = sp;
+          return { ...prev, speakers };
+        });
+        setLinkedInStatus(prev => ({ ...prev, [i]: 'success' }));
+      } else {
+        setLinkedInStatus(prev => ({ ...prev, [i]: 'failed' }));
+      }
+    } catch {
+      setLinkedInStatus(prev => ({ ...prev, [i]: 'failed' }));
+    }
+  };
   const setAgenda = (i: number, key: string, val: string) => {
     setForm(prev => {
       const agenda = [...prev.agenda];
@@ -200,7 +319,7 @@ export default function CreateEventPage() {
       return { ...prev, agenda };
     });
   };
-  const addSpeaker = () => setForm(p => ({ ...p, speakers: [...p.speakers, { name: '', role: '', company: '', bio: '' }] }));
+  const addSpeaker = () => setForm(p => ({ ...p, speakers: [...p.speakers, { title: '', name: '', role: '', company: '', linkedIn: '', bio: '' }] }));
   const addAgenda = () => setForm(p => ({ ...p, agenda: [...p.agenda, { time: '', title: '', duration: '', speaker: '' }] }));
   const removeSpeaker = (i: number) => setForm(prev => {
     const removedName = prev.speakers[i]?.name || '';
@@ -219,6 +338,7 @@ export default function CreateEventPage() {
   const endDate = parseLocalDateTime(form.endDateTime);
   const isMultiDay = !!startDate && !!endDate && !isSameCalendarDay(startDate, endDate) && endDate > startDate;
   const agendaTimeOptions = buildTimeOptions(form.dateTime, form.endDateTime);
+  const agendaTimeStartOptions = agendaTimeOptions.length > 1 ? agendaTimeOptions.slice(0, -1) : agendaTimeOptions;
   const addDay = () => setForm(p => ({
     ...p,
     days: [...p.days, { day: p.days.length + 1, label: `Day ${p.days.length + 1}`, agenda: [{ time: '', title: '', duration: '', speaker: '' }] }],
@@ -391,6 +511,16 @@ export default function CreateEventPage() {
 
   const titleNode = "Create New Event";
 
+  const combinedCities = Array.from(new Set([
+    ...predefinedCities,
+    ...locations.map(l => l.city).filter(Boolean)
+  ]));
+
+  const combinedColleges = Array.from(new Set([
+    ...apiColleges,
+    ...locations.filter(l => l.city.toLowerCase() === form.city.toLowerCase() && l.collegeName).map(l => l.collegeName)
+  ]));
+
   return (
     <AdminLayout title={titleNode}>
       <div className="max-w-4xl mx-auto rounded-[32px] bg-[#FAF7F2]">
@@ -436,13 +566,19 @@ export default function CreateEventPage() {
             {step === 1 && (
                 <div className="space-y-4">
                 <h2 className="font-bold text-lg text-[#0E1B3D] mb-5">Event Details</h2>
-                <FormInput label="Event Name *" value={form.name} onChange={v => set('name', v)} placeholder="Tech Summit 2025" />
+                <FormInput label="Event Name *" value={form.name} onChange={v => set('name', v)} placeholder="TechTrek 2026 " />
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormInput label="College Name *" value={form.collegeName} onChange={v => set('collegeName', v)} placeholder="KSR College of Engineering" />
-                  <FormInput label="College Email Domain *" value={form.collegeDomain} onChange={v => set('collegeDomain', v)} placeholder="ksrce.ac.in" />
+                  <ComboboxInput label="City *" value={form.city} onChange={v => set('city', v)} placeholder="Chennai" 
+                    options={combinedCities} />
+                  <ComboboxInput label="College Name *" value={form.collegeName} onChange={v => {
+                    set('collegeName', v);
+                    const found = locations.find(l => l.collegeName.toLowerCase() === v.toLowerCase() && l.collegeDomain);
+                    if (found) set('collegeDomain', found.collegeDomain);
+                  }} placeholder="Select a city first" options={combinedColleges} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormInput label="City *" value={form.city} onChange={v => set('city', v)} placeholder="Tiruchengode" />
+                  <FormInput label="College Email Domain *" value={form.collegeDomain} onChange={v => set('collegeDomain', v)} placeholder="ksrce.ac.in" />
                   <FormInput label="Venue *" value={form.venue} onChange={v => set('venue', v)} placeholder="Main Auditorium" />
                 </div>
                 <div>
@@ -469,10 +605,29 @@ export default function CreateEventPage() {
                         <button onClick={() => removeSpeaker(i)} className="text-red-400 text-xs font-bold hover:text-red-600">Remove</button>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                      <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                      <div className="flex flex-col">
                         <label className={fieldLabelClassName}>Full Name</label>
-                        <input value={sp.name} onChange={e => setSpeaker(i, 'name', e.target.value)} placeholder="Full Name" className={formFieldClassName} />
+                        <div className="flex">
+                          <select 
+                            value={sp.title || ''} 
+                            onChange={e => setSpeaker(i, 'title', e.target.value)}
+                            className="bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] border-r-0 rounded-l-xl px-2 text-sm outline-none focus:border-[#C84B11] focus:ring-1 focus:ring-[#C84B11] focus:z-10 transition-colors w-[80px]"
+                          >
+                            <option value="">Title</option>
+                            <option value="Dr.">Dr.</option>
+                            <option value="Mr.">Mr.</option>
+                            <option value="Mrs.">Mrs.</option>
+                            <option value="Ms.">Ms.</option>
+                            <option value="Prof.">Prof.</option>
+                          </select>
+                          <input 
+                            value={sp.name} 
+                            onChange={e => setSpeaker(i, 'name', e.target.value)} 
+                            placeholder="Full Name" 
+                            className="flex-1 bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] placeholder-[#B3A79A] rounded-r-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] focus:z-10 focus:ring-1 focus:ring-[#C84B11] transition-colors" 
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className={fieldLabelClassName}>Title/Role</label>
@@ -481,6 +636,63 @@ export default function CreateEventPage() {
                       <div>
                         <label className={fieldLabelClassName}>Company</label>
                         <input value={sp.company} onChange={e => setSpeaker(i, 'company', e.target.value)} placeholder="Company" className={formFieldClassName} />
+                      </div>
+                      <div>
+                        <label className={fieldLabelClassName}>LinkedIn Profile</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="url"
+                            pattern="^https?:\/\/(?:www\.|[a-z]{2,3}\.)?linkedin\.com\/in\/[\w\-.]+(?:\/.*)?$"
+                            value={sp.linkedIn || ''}
+                            onChange={e => {
+                              setSpeaker(i, 'linkedIn', e.target.value);
+                              if (linkedInStatus[i] && linkedInStatus[i] !== 'idle') {
+                                setLinkedInStatus(prev => ({ ...prev, [i]: 'idle' }));
+                              }
+                            }}
+                            onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('Must be a valid LinkedIn URL starting with https://www.linkedin.com/in/')}
+                            onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
+                            placeholder="https://linkedin.com/in/..."
+                            className={`flex-1 ${formFieldClassName} invalid:border-red-400 invalid:text-red-600 focus:invalid:border-red-500`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => fetchLinkedInData(i, sp.linkedIn)}
+                            className="flex-shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white p-[11px] rounded-xl transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                            disabled={!sp.linkedIn || linkedInStatus[i] === 'fetching'}
+                            title="Fetch LinkedIn Details"
+                          >
+                            {linkedInStatus[i] === 'fetching' ? (
+                              <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                        {/* Inline status */}
+                        {linkedInStatus[i] === 'fetching' && (
+                          <p className="flex items-center gap-1.5 text-[#C84B11] text-[10px] mt-1.5 font-semibold">
+                            <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                            </svg>
+                            Fetching details…
+                          </p>
+                        )}
+                        {linkedInStatus[i] === 'success' && (
+                          <p className="flex items-center gap-1.5 text-emerald-600 text-[10px] mt-1.5 font-semibold">✓ Details auto-filled from LinkedIn</p>
+                        )}
+                        {linkedInStatus[i] === 'failed' && (
+                          <p className="flex items-center gap-1.5 text-red-500 text-[10px] mt-1.5 font-semibold">⚠ Fetching failed — please fill manually</p>
+                        )}
+                        {(sp.linkedIn && !/^https?:\/\/(?:www\.|[a-z]{2,3}\.)?linkedin\.com\/in\/[\w\-.]+(?:\/.*)?$/.test(sp.linkedIn)) && (
+                          <p className="text-red-500 text-[10px] mt-1 font-semibold">Valid LinkedIn /in/ URL required</p>
+                        )}
                       </div>
                       <div className="sm:col-span-2">
                         <label className={fieldLabelClassName}>Short Bio</label>
@@ -501,7 +713,7 @@ export default function CreateEventPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormInput label="Start Date & Time *" type="datetime-local" value={form.dateTime} onChange={v => set('dateTime', v)} />
                   <div>
-                  <label className={fieldLabelClassName}>End Date & Time <span className="text-[#A39A90] font-medium normal-case tracking-normal">(leave blank for 1-day)</span></label>
+                  <label className={fieldLabelClassName}>End Date & Time </label>
                   <input type="datetime-local" value={form.endDateTime} onChange={e => set('endDateTime', e.target.value)}
                       className={formFieldClassName} />
                   </div>
@@ -525,20 +737,22 @@ export default function CreateEventPage() {
 
                 {!isMultiDay && (
                   <div className="bg-[#F2EBE0] border border-[#E2D8CC] rounded-2xl p-5 mt-4">
-                    <h3 className="font-bold text-[#0E1B3D] mb-4 text-sm">Agenda Items (Optional)</h3>
+                    <h3 className="font-bold text-[#0E1B3D] mb-4 text-sm">Agenda Items</h3>
                     {form.agenda.map((item, i) => {
                       const timeRange = splitTimeRange(item.time);
+                      const startIdx = agendaTimeOptions.findIndex(o => o.value === timeRange.start);
+                      const endOptions = startIdx >= 0 ? agendaTimeOptions.slice(startIdx + 1) : agendaTimeOptions;
                       return (
                       <div key={i} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-3">
                         <select value={timeRange.start} onChange={e => setAgendaRange(i, 'start', e.target.value)} className={compactFormFieldClassName}>
-                          <option value="">{agendaTimeOptions.length ? 'Start Time' : 'Set event time first'}</option>
-                          {agendaTimeOptions.map(option => (
+                          <option value="">{agendaTimeStartOptions.length ? 'Start Time' : 'Set event time first'}</option>
+                          {agendaTimeStartOptions.map(option => (
                             <option key={`start-${option.value}`} value={option.value}>{option.value}</option>
                           ))}
                         </select>
                         <select value={timeRange.end} onChange={e => setAgendaRange(i, 'end', e.target.value)} className={compactFormFieldClassName}>
-                          <option value="">{agendaTimeOptions.length ? 'End Time' : 'Set event time first'}</option>
-                          {agendaTimeOptions.map(option => (
+                          <option value="">{endOptions.length ? 'End Time' : 'Set event time first'}</option>
+                          {endOptions.map(option => (
                             <option key={`end-${option.value}`} value={option.value}>{option.value}</option>
                           ))}
                         </select>
@@ -580,17 +794,19 @@ export default function CreateEventPage() {
                         </div>
                         {d.agenda.map((item, ai) => {
                           const timeRange = splitTimeRange(item.time);
+                          const startIdx = agendaTimeOptions.findIndex(o => o.value === timeRange.start);
+                          const endOptions = startIdx >= 0 ? agendaTimeOptions.slice(startIdx + 1) : agendaTimeOptions;
                           return (
                           <div key={ai} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-3">
                             <select value={timeRange.start} onChange={e => setDayAgendaRange(dayIdx, ai, 'start', e.target.value)} className={compactFormFieldClassName}>
-                              <option value="">{agendaTimeOptions.length ? 'Start Time' : 'Set event time first'}</option>
-                              {agendaTimeOptions.map(option => (
+                              <option value="">{agendaTimeStartOptions.length ? 'Start Time' : 'Set event time first'}</option>
+                              {agendaTimeStartOptions.map(option => (
                                 <option key={`${d.day}-start-${option.value}`} value={option.value}>{option.value}</option>
                               ))}
                             </select>
                             <select value={timeRange.end} onChange={e => setDayAgendaRange(dayIdx, ai, 'end', e.target.value)} className={compactFormFieldClassName}>
-                              <option value="">{agendaTimeOptions.length ? 'End Time' : 'Set event time first'}</option>
-                              {agendaTimeOptions.map(option => (
+                              <option value="">{endOptions.length ? 'End Time' : 'Set event time first'}</option>
+                              {endOptions.map(option => (
                                 <option key={`${d.day}-end-${option.value}`} value={option.value}>{option.value}</option>
                               ))}
                             </select>
@@ -632,7 +848,7 @@ export default function CreateEventPage() {
                     <select value={selectedHallId} onChange={e => autofillHall(e.target.value)}
                       className="w-full bg-[#FAF7F2] text-[#1C1A17] border border-[#E2D8CC] rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#C84B11]">
                       <option value="">— Create new layout —</option>
-                      {savedHalls.map(h => (
+                      {savedHalls.filter(h => h.collegeName === form.collegeName).map(h => (
                         <option key={h._id} value={h._id}>{h.hall_name} ({h.total_rows} rows × {h.seats_per_row} seats)</option>
                       ))}
                     </select>
@@ -640,7 +856,7 @@ export default function CreateEventPage() {
                 )}
 
                 {/* Hall config grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr] gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={fieldLabelClassName}>Hall Name</label>
                     <input value={layout.hall_name} onChange={e => setL('hall_name', e.target.value)} placeholder="Main Auditorium"

@@ -452,6 +452,12 @@ export default function AdminEventDashboard() {
 
   const markCompleted = async () => {
     if (!token || !eventInfo || eventInfo.status === 'COMPLETED') return;
+    const eventDate = new Date(eventInfo.dateTime);
+    if (new Date() < eventDate) {
+      if (!window.confirm("This event hasn't happened yet based on its scheduled date. Are you sure you want to mark it as completed early?")) {
+        return;
+      }
+    }
     if (!confirmComplete) {
       setConfirmComplete(true);
       showToast('Click "Mark Completed" again to confirm.', 'warning');

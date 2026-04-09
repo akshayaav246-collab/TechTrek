@@ -1,4 +1,6 @@
 const SeatBooking = require('../models/SeatBooking');
+const Registration = require('../models/Registration');
+const Event = require('../models/Event');
 
 // GET /api/seats/:eventId — all seat statuses for an event (public)
 exports.getSeats = async (req, res) => {
@@ -13,12 +15,39 @@ exports.getSeats = async (req, res) => {
 };
 
 // POST /api/seats/hold — hold a seat for 30 mins
+// Requires the user to have a PENDING_PAYMENT registration for the event
 exports.holdSeat = async (req, res) => {
   const { eventId, seatId } = req.body;
   if (!eventId || !seatId) return res.status(400).json({ message: 'eventId and seatId required' });
 
   try {
-    // Check if already held / confirmed by another user
+    // Verify user has an active PENDING_PAYMENT registration for this event
+    const event = await Event.findOne({ eventId });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    const pendingReg = await Registration.findOne({
+      event: event._id,
+      user: req.user._id,
+      status: 'PENDING_PAYMENT',
+      cancelledAt: null,
+    });
+
+    if (!pendingReg) {
+      // Also allow if already REGISTERED (re-viewing seat or changing hold)
+      const existingReg = await Registration.findOne({
+        event: event._id,
+        user: req.user._id,
+        status: 'REGISTERED',
+        cancelledAt: null,
+      });
+      if (!existingReg) {
+        return res.status(403).json({
+          message: 'You must register for the event before selecting a seat.',
+        });
+      }
+    }
+
+    // Check if seat is already held or confirmed by another user
     const existing = await SeatBooking.findOne({ eventId, seatId });
     if (existing) {
       if (existing.userId.toString() === req.user._id.toString()) {
@@ -27,12 +56,13 @@ exports.holdSeat = async (req, res) => {
       return res.status(409).json({ message: 'Seat is already taken' });
     }
 
-    // Release any other holds by this user on this event (1 seat at a time)
+    // Release any other temp holds this user has on this event (1 seat at a time)
     await SeatBooking.deleteMany({ eventId, userId: req.user._id, status: 'temp_hold' });
 
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
     const booking = await SeatBooking.create({
-      eventId, seatId,
+      eventId,
+      seatId,
       userId: req.user._id,
       status: 'temp_hold',
       expiresAt,
@@ -46,7 +76,7 @@ exports.holdSeat = async (req, res) => {
   }
 };
 
-// POST /api/seats/confirm — confirm/pay for a held seat
+// POST /api/seats/confirm — confirm/pay for a held seat (direct confirm without Razorpay)
 exports.confirmSeat = async (req, res) => {
   const { eventId, seatId } = req.body;
   try {
@@ -56,7 +86,7 @@ exports.confirmSeat = async (req, res) => {
     if (!booking) return res.status(404).json({ message: 'No active hold found for this seat' });
 
     booking.status = 'confirmed';
-    booking.expiresAt = null; // remove TTL — permanently blocked
+    booking.expiresAt = null;
     await booking.save();
     res.json(booking);
   } catch (err) {

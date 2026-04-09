@@ -1,55 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { getRecommendation } from '@/utils/recommendation';
 
 type AgendaItem = { time: string; title: string; duration: string; speaker?: string; topics?: string[] };
 type DaySchedule = { day: number; label?: string; date?: string; agenda: AgendaItem[] };
 
-// ── Domain → Tech keyword map ─────────────────────────────────────────────────
-// Based on student discipline (free-text from signup), we derive relevant keywords.
-// Matching is case-insensitive on session title.
-const DOMAIN_KEYWORDS: Record<string, string[]> = {
-  // Computer Science & Engineering
-  cse: ['ai', 'artificial intelligence', 'machine learning', 'deep learning', 'neural', 'nlp', 'robotics',
-    'cloud', 'aws', 'azure', 'devops', 'docker', 'kubernetes', 'cyber', 'security', 'hacking',
-    'web', 'frontend', 'backend', 'react', 'next', 'api', 'fullstack', 'database', 'blockchain',
-    'data science', 'iot', 'embedded', 'algorithm', 'coding', 'programming', 'software'],
-  it: ['web', 'frontend', 'backend', 'react', 'next', 'api', 'database', 'cloud', 'devops',
-    'cyber', 'security', 'networking', 'software', 'agile', 'system design', 'microservices'],
-  ece: ['electronics', 'embedded', 'iot', 'robotics', 'signal', 'vlsi', 'fpga', 'pcb', 'circuit',
-    'microcontroller', 'arduino', 'raspberry', 'wireless', 'communication', '5g', 'semiconductor'],
-  eee: ['power', 'electrical', 'battery', 'ev', 'solar', 'renewable', 'energy', 'smart grid',
-    'embedded', 'iot', 'automation', 'plc', 'scada', 'drive', 'motor'],
-  mechanical: ['robotics', 'automation', 'manufacturing', '3d printing', 'cad', 'cam', 'design',
-    'materials', 'thermal', 'fluid', 'industry 4.0', 'simulation', 'ev', 'aerospace'],
-  civil: ['infrastructure', 'smart city', 'sustainability', 'environment', 'gis', 'mapping',
-    'construction', 'design', 'green', 'urban planning', 'water management'],
-  mba: ['entrepreneurship', 'startup', 'business', 'leadership', 'marketing', 'finance', 'strategy',
-    'innovation', 'management', 'product', 'venture', 'growth'],
-  default: ['technology', 'innovation', 'career', 'future', 'skill', 'industry', 'startup',
-    'leadership', 'digital', 'transform'],
-};
 
-// Normalise discipline string to a key
-const disciplineToKey = (discipline: string): string => {
-  const d = discipline.toLowerCase();
-  if (d.includes('computer') || d.includes('cse') || d.includes('cs')) return 'cse';
-  if (d.includes(' it') || d === 'it' || d.includes('information tech')) return 'it';
-  if (d.includes('electronics') || d.includes('ece')) return 'ece';
-  if (d.includes('electrical') || d.includes('eee')) return 'eee';
-  if (d.includes('mechanic') || d.includes('mech')) return 'mechanical';
-  if (d.includes('civil')) return 'civil';
-  if (d.includes('mba') || d.includes('business') || d.includes('commerce')) return 'mba';
-  return 'default';
-};
-
-// Returns true if a session title is relevant to this discipline
-const isRecommended = (title: string, discipline: string): boolean => {
-  const key = disciplineToKey(discipline);
-  const keywords = [...(DOMAIN_KEYWORDS[key] || []), ...DOMAIN_KEYWORDS.default];
-  const lower = title.toLowerCase();
-  return keywords.some(kw => lower.includes(kw));
-};
 
 export function DaySelectionModal({
   days,
@@ -72,26 +30,35 @@ export function DaySelectionModal({
   const [expandedDay, setExpandedDay] = useState<number | null>(days[0]?.day ?? null);
 
   const toggle = (dayNum: number) => {
-    setSelected(prev =>
-      prev.includes(dayNum) ? prev.filter(d => d !== dayNum) : [...prev, dayNum]
-    );
+    setSelected(prev => {
+      const isNowSelected = !prev.includes(dayNum);
+      if (isNowSelected) setExpandedDay(dayNum);
+      return isNowSelected ? [...prev, dayNum] : prev.filter(d => d !== dayNum);
+    });
   };
 
   const totalCost = selected.length * perDayAmount;
   const refundIfCancelled = selected.length * (perDayAmount - 100); // ₹400/day
 
-  // Per-day recommendation count for display
-  const dayRecommendations = useMemo(() => {
-    const disc = discipline || '';
-    return days.reduce((acc, d) => {
-      acc[d.day] = d.agenda.filter(item => isRecommended(item.title, disc)).length;
-      return acc;
-    }, {} as Record<number, number>);
+  const [aiRec, setAiRec] = useState<{recommendedDay: string, reason: string} | null>(null);
+
+  useEffect(() => {
+    if (!discipline) return;
+    const agendaText = days.map(d => `Day ${d.day}:\n${d.agenda.map(a => `- ${a.title} (${a.duration})`).join('\n')}`).join('\n\n');
+    let isCancelled = false;
+
+    getRecommendation(discipline, "Student", agendaText)
+      .then(res => {
+        if (!isCancelled) setAiRec(res);
+      })
+      .catch(err => console.error("AI recommendation failed", err));
+
+    return () => { isCancelled = true; };
   }, [days, discipline]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col bg-white rounded-3xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start pt-[100px] justify-center p-4">
+      <div className="w-full max-w-2xl max-h-[calc(100vh-120px)] flex flex-col bg-white rounded-3xl shadow-2xl overflow-hidden">
 
         {/* Header */}
         <div className="bg-gradient-to-r from-[#0E1B3D] to-[#1a2d5c] px-6 py-5 shrink-0">
@@ -108,14 +75,23 @@ export function DaySelectionModal({
             </button>
           </div>
 
-          {discipline && (
-            <div className="mt-3 flex items-center gap-2 bg-[#e8631a]/20 border border-[#e8631a]/30 rounded-xl px-3 py-2 w-fit">
-              <svg className="w-3.5 h-3.5 text-[#e8631a]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-              </svg>
-              <span className="text-[#e8631a] text-xs font-bold">Sessions recommended for {discipline}</span>
+          {aiRec ? (
+            <div className="mt-4 flex items-start gap-3 bg-[#e8631a]/10 border border-[#e8631a]/30 rounded-xl px-4 py-3">
+              <div className="text-xl mt-0.5">✨</div>
+              <div>
+                <span className="text-[#e8631a] text-sm font-bold block mb-1">AI Recommendation for {discipline} — {aiRec.recommendedDay}</span>
+                <span className="text-white/85 text-xs leading-relaxed inline-block">{aiRec.reason}</span>
+              </div>
             </div>
-          )}
+          ) : discipline ? (
+            <div className="mt-4 flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
+               <svg className="animate-spin h-5 w-5 text-[#e8631a]" fill="none" viewBox="0 0 24 24">
+                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+               </svg>
+               <span className="text-white/60 text-xs">AI analyzing agenda to find the best day for you...</span>
+            </div>
+          ) : null}
         </div>
 
         {/* Day list — scrollable */}
@@ -123,7 +99,6 @@ export function DaySelectionModal({
           {days.map(dayData => {
             const isSelected = selected.includes(dayData.day);
             const isExpanded = expandedDay === dayData.day;
-            const recCount = dayRecommendations[dayData.day] ?? 0;
 
             return (
               <div key={dayData.day} className={`transition-colors ${isSelected ? 'bg-[#e8631a]/5' : 'bg-white'}`}>
@@ -156,11 +131,6 @@ export function DaySelectionModal({
                           {new Date(dayData.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         </span>
                       )}
-                      {recCount > 0 && discipline && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                          ⭐ {recCount} recommended for you
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{dayData.agenda.length} sessions · ₹{perDayAmount}</p>
                   </div>
@@ -179,46 +149,43 @@ export function DaySelectionModal({
                   </button>
                 </div>
 
-                {/* Expanded sessions */}
-                {isExpanded && (
-                  <div className="px-5 pb-4 space-y-2 border-t border-gray-100 pt-3">
-                    {dayData.agenda.length === 0 ? (
-                      <p className="text-sm text-gray-400 italic">No sessions scheduled yet.</p>
-                    ) : dayData.agenda.map((item, i) => {
-                      const rec = isRecommended(item.title, discipline || '');
-                      return (
-                        <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
-                          rec ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100'
-                        }`}>
-                          <div className="shrink-0 mt-0.5">
-                            {rec ? (
-                              <span className="text-amber-500 text-base">⭐</span>
-                            ) : (
+                {/* Expanded sessions with smooth accordion animation */}
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      key={`expanded-${dayData.day}`}
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-4 space-y-2 border-t border-gray-100 pt-3">
+                        {dayData.agenda.length === 0 ? (
+                          <p className="text-sm text-gray-400 italic">No sessions scheduled yet.</p>
+                        ) : dayData.agenda.map((item, i) => (
+                          <div key={i} className="flex items-start gap-3 p-3 rounded-xl border transition-colors bg-gray-50 border-gray-100">
+                            <div className="shrink-0 mt-0.5">
                               <div className="w-4 h-4 rounded-full bg-[#0E1B3D]/10 mt-0.5" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-bold leading-snug ${rec ? 'text-amber-900' : 'text-[#0E1B3D]'}`}>
-                              {item.title}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1 flex-wrap">
-                              <span className="text-[11px] text-[#e8631a] font-bold">{item.time}</span>
-                              <span className="text-[11px] text-gray-400">{item.duration}</span>
-                              {item.speaker && (
-                                <span className="text-[11px] text-gray-500">by {item.speaker}</span>
-                              )}
                             </div>
-                            {rec && (
-                              <span className="inline-block mt-1.5 text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                                Recommended for {discipline}
-                              </span>
-                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold leading-snug text-[#0E1B3D]">
+                                {item.title}
+                              </p>
+                              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                <span className="text-[11px] text-[#e8631a] font-bold">{item.time}</span>
+                                <span className="text-[11px] text-gray-400">{item.duration}</span>
+                                {item.speaker && (
+                                  <span className="text-[11px] text-gray-500">by {item.speaker}</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}

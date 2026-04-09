@@ -30,7 +30,7 @@ const eventSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   description: { type: String },
   topics: [{ type: String }],
-  speakers: [{ name: String, role: String, company: String, bio: String, headline: String, tags: [String], date: String, duration: String, image: String }],
+  speakers: [{ title: String, name: String, role: String, company: String, linkedIn: String, bio: String, headline: String, tags: [String], date: String, duration: String, image: String }],
   // Single-day agenda (legacy / simple events)
   agenda: [agendaItemSchema],
   // Multi-day agenda: if days.length > 0, the frontend shows Day 1 / Day 2 tabs

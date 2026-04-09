@@ -8,6 +8,7 @@ const hallLayoutSchema = new mongoose.Schema({
   reserved_rows: { type: [String], default: [] },         // e.g. ['A', 'B']
   stage_position: { type: String, enum: ['front', 'back'], default: 'front' },
   entry_points: { type: String, enum: ['left', 'right', 'both'], default: 'both' },
+  collegeName: { type: String, trim: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

@@ -8,6 +8,7 @@ const { getNonceState, markNonceUsed } = require('../services/nonceStoreService'
 const { broadcastAlert } = require('../services/alertService');
 const { getIpAddress } = require('../middleware/adminSessionMiddleware');
 const { generateCertificateInBackground } = require('../services/certificateService');
+const SeatBooking = require('../models/SeatBooking');
 
 const buildRequestContext = (req) => ({
   deviceInfo: req.headers['user-agent'] || '',
@@ -43,13 +44,66 @@ const logAttendanceAttempt = async ({
   });
 };
 
-// @desc    Check-in a student via thin QR token
+// @desc    Check-in a student via thin QR token or Ticket ID
 // @route   POST /api/attendance/checkin
 const checkIn = async (req, res) => {
   const { encryptedQrPayload } = req.body;
   if (!encryptedQrPayload) {
-    return res.status(400).json({ message: 'QR payload is required.' });
+    return res.status(400).json({ message: 'Payload is required.' });
   }
+
+  // --- PATH 1: Ticket ID Manual Check-in ---
+  if (encryptedQrPayload.startsWith('TT-')) {
+    const registration = await Registration.findOne({ ticketId: encryptedQrPayload })
+      .populate('user', 'name email college year discipline')
+      .populate('event', 'name venue dateTime checkedInCount registeredCount checkInStarted');
+
+    if (!registration) {
+      return res.status(404).json({ message: 'Registration not found for the provided Ticket ID.' });
+    }
+    if (registration.cancelledAt || registration.status === 'CANCELLED') {
+      return res.status(410).json({ message: 'Registration cancelled. Check-in not permitted.' });
+    }
+    const event = await Event.findById(registration.event._id || registration.event);
+    if (!event || !event.checkInStarted) {
+      return res.status(403).json({ message: 'Check-in has not been started for this event yet.' });
+    }
+
+    const seatBooking = await SeatBooking.findOne({ eventId: event._id, userId: registration.user._id, status: 'confirmed' });
+    const seatId = seatBooking ? seatBooking.seatId : 'Unassigned';
+
+    if (registration.checkedIn) {
+      return res.status(409).json({
+        message: 'Duplicate check-in detected.',
+        alreadyCheckedIn: true,
+        studentName: registration.user.name,
+        eventName: registration.event.name,
+        ticketId: registration.ticketId,
+        checkedInAt: registration.checkedInAt,
+      });
+    }
+
+    registration.checkedIn = true;
+    registration.checkedInAt = new Date();
+    registration.status = 'CHECKED_IN';
+    await registration.save();
+    await Event.findByIdAndUpdate(event._id, { $inc: { checkedInCount: 1 } });
+    
+    generateCertificateInBackground(registration._id).catch(err => console.error(err));
+
+    return res.status(200).json({
+      message: 'Check-In Successful!',
+      studentName: registration.user.name,
+      studentEmail: registration.user.email,
+      college: registration.user.college,
+      eventName: registration.event.name,
+      checkedInAt: registration.checkedInAt,
+      ticketId: registration.ticketId,
+      seatNo: seatId
+    });
+  }
+
+  // --- PATH 2: Standard QR Code Check-in ---
 
   let qrToken;
   let tokenRecord;
@@ -169,6 +223,7 @@ const checkIn = async (req, res) => {
         alreadyCheckedIn: true,
         studentName: registration.user.name,
         eventName: registration.event.name,
+        ticketId: registration.ticketId,
         checkedInAt: registration.checkedInAt,
       });
     }
@@ -221,6 +276,7 @@ const checkIn = async (req, res) => {
       alreadyCheckedIn: true,
       studentName: registration.user.name,
       eventName: registration.event.name,
+      ticketId: registration.ticketId,
       checkedInAt: registration.checkedInAt,
     });
   }
@@ -237,6 +293,9 @@ const checkIn = async (req, res) => {
       console.error('Background certificate generation failed:', err);
     });
   }
+
+  const seatBooking = await SeatBooking.findOne({ eventId: event._id, userId: registration.user._id, status: 'confirmed' });
+  const seatId = seatBooking ? seatBooking.seatId : 'Unassigned';
 
   const context = buildRequestContext(req);
   await logAttendanceAttempt({
@@ -272,6 +331,8 @@ const checkIn = async (req, res) => {
     college: registration.user.college,
     eventName: registration.event.name,
     checkedInAt: registration.checkedInAt,
+    ticketId: registration.ticketId,
+    seatNo: seatId
   });
 };
 

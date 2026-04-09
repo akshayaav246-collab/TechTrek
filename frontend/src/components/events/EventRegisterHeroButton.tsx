@@ -39,22 +39,17 @@ export function EventRegisterHeroButton({ eventId }: { eventId: string }) {
     document.getElementById('register-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  if (isRegistered) return null;
+
   return (
     <button
       type="button"
       onClick={handleClick}
-      disabled={isRegistered}
-      className={`group relative inline-flex overflow-hidden rounded-2xl border px-7 py-4 text-base font-extrabold uppercase tracking-[0.14em] text-white shadow-[0_4px_15px_rgba(232,99,26,0.4)] transition-all duration-300 ${
-        isRegistered
-          ? 'cursor-not-allowed border-white/15 bg-white/10 shadow-none'
-          : 'border-white/10 bg-gradient-to-r from-[#e8631a] to-[#991B1B] hover:scale-[1.03] hover:shadow-[0_6px_20px_rgba(232,99,26,0.6)]'
-      }`}
+      className={`group relative inline-flex overflow-hidden rounded-2xl border px-7 py-4 text-base font-extrabold uppercase tracking-[0.14em] text-white shadow-[0_4px_15px_rgba(232,99,26,0.4)] transition-all duration-300 border-white/10 bg-gradient-to-r from-[#e8631a] to-[#991B1B] hover:scale-[1.03] hover:shadow-[0_6px_20px_rgba(232,99,26,0.6)]`}
     >
-      {!isRegistered && (
-        <span className="absolute top-0 left-0 h-full w-[50%] -translate-x-[150%] skew-x-[-15deg] bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:animate-[shimmer_0.75s_linear_infinite] animate-[shimmer_1.5s_linear_infinite]" />
-      )}
+      <span className="absolute top-0 left-0 h-full w-[50%] -translate-x-[150%] skew-x-[-15deg] bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:animate-[shimmer_0.75s_linear_infinite] animate-[shimmer_1.5s_linear_infinite]" />
       <span className="relative z-10 flex items-center gap-3">
-        {isRegistered ? 'Already Registered' : 'Register Now!'}
+        Register Now!
       </span>
     </button>
   );

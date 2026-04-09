@@ -13,7 +13,7 @@ const registrationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['REGISTERED', 'WAITLISTED', 'CANCELLED', 'CHECKED_IN'],
+    enum: ['REGISTERED', 'WAITLISTED', 'CANCELLED', 'CHECKED_IN', 'PENDING_PAYMENT'],
     default: 'REGISTERED'
   },
   qrCode: { type: String },       // base64 PNG data URL
@@ -57,7 +57,9 @@ const registrationSchema = new mongoose.Schema({
     default: 'not_started'
   },
   certificate_url: { type: String },
-  feedback_submitted: { type: Boolean, default: false }
+  feedback_submitted: { type: Boolean, default: false },
+  // Human readable Ticket ID (e.g. TT-20260127-ABC123)
+  ticketId: { type: String, unique: true, sparse: true }
 }, { timestamps: true });
 
 // Prevent duplicate registrations

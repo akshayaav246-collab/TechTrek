@@ -17,8 +17,10 @@ const syncSpeakerLibrary = async (speakers = [], user) => {
     .map(speaker => ({
       name: speaker.name.trim(),
       normalizedName: normalizeName(speaker.name),
+      title: (speaker.title || '').trim(),
       role: (speaker.role || '').trim(),
       company: (speaker.company || '').trim(),
+      linkedIn: (speaker.linkedIn || '').trim(),
       bio: (speaker.bio || '').trim(),
     }));
 
@@ -237,7 +239,7 @@ const getParticipants = async (req, res) => {
       .lean();
 
     const total      = regs.length;
-    const registered = regs.filter(r => r.status === 'REGISTERED').length;
+    const registered = regs.filter(r => r.status === 'REGISTERED' || r.status === 'CHECKED_IN').length;
     const waitlisted = regs.filter(r => r.status === 'WAITLISTED').length;
     const checkedIn  = regs.filter(r => r.status === 'CHECKED_IN').length;
     const noShow     = registered - checkedIn;

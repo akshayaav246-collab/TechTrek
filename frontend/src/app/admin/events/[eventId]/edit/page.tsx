@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -105,7 +105,42 @@ function FormInput({ label, type = 'text', placeholder = '', value, onChange, re
     </div>
   );
 }
+function ComboboxInput({ label, placeholder = '', value, options, onChange, required = false }: {
+  label: string; placeholder?: string; value: string; options: string[]; onChange: (v: string) => void; required?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setIsOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter(opt => opt.toLowerCase().includes(value.toLowerCase()) && opt !== value);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <label className="block text-sm font-bold tracking-wide text-gray-600 mb-1.5">{label}</label>
+      <input type="text" placeholder={placeholder} value={value} required={required}
+        onChange={e => { onChange(e.target.value); setIsOpen(true); }}
+        onFocus={() => setIsOpen(true)}
+        className="w-full bg-white text-[#1C1A17] border border-gray-200 placeholder-gray-400 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#C84B11] transition-colors shadow-sm" />
+      {isOpen && filteredOptions.length > 0 && (
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-xl bg-white border border-[#E2D8CC] shadow-xl py-1">
+          {filteredOptions.map((option, idx) => (
+            <li key={idx} onClick={() => { onChange(option); setIsOpen(false); }}
+              className="cursor-pointer px-4 py-2 text-sm text-[#1C1A17] hover:bg-[#F2EBE0] hover:text-[#C84B11] font-semibold transition-colors">
+              {option}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 export default function EditEventPage() {
   const { user, token, isLoading } = useAuth();
   const router = useRouter();
@@ -121,6 +156,20 @@ export default function EditEventPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [locations, setLocations] = useState<{city: string, collegeName: string}[]>([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/events')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setLocations(data.map(e => ({ city: e.city || '', collegeName: e.collegeName || '' })));
+        } else if (data.events && Array.isArray(data.events)) {
+           setLocations(data.events.map((e: any) => ({ city: e.city || '', collegeName: e.collegeName || '' })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchEvent = useCallback(async () => {
     try {
@@ -266,11 +315,13 @@ export default function EditEventPage() {
                     <h2 className="font-bold text-lg text-[#0E1B3D] mb-5">Event Details</h2>
                     <FormInput label="Event Name *" value={form.name} onChange={v => set('name', v)} placeholder="Tech Summit 2025" required />
                     <div className="grid grid-cols-2 gap-4">
-                      <FormInput label="College Name *" value={form.collegeName} onChange={v => set('collegeName', v)} placeholder="KSR College of Engineering" required />
-                      <FormInput label="College Email Domain *" value={form.collegeDomain} onChange={v => set('collegeDomain', v)} placeholder="ksrce.ac.in" required />
+                      <ComboboxInput label="City *" value={form.city} onChange={v => set('city', v)} placeholder="Tiruchengode" required
+                        options={Array.from(new Set(locations.map(l => l.city).filter(Boolean)))} />
+                      <ComboboxInput label="College Name *" value={form.collegeName} onChange={v => set('collegeName', v)} placeholder="KSR College of Engineering" required
+                        options={Array.from(new Set(locations.filter(l => l.city.toLowerCase() === form.city.toLowerCase() && l.collegeName).map(l => l.collegeName)))} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <FormInput label="City *" value={form.city} onChange={v => set('city', v)} placeholder="Tiruchengode" required />
+                      <FormInput label="College Email Domain *" value={form.collegeDomain} onChange={v => set('collegeDomain', v)} placeholder="ksrce.ac.in" required />
                       <FormInput label="Venue *" value={form.venue} onChange={v => set('venue', v)} placeholder="Main Auditorium" required />
                     </div>
                     <div>

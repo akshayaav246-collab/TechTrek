@@ -179,14 +179,6 @@ async function fetchUpcomingSpeakerCards(): Promise<SpeakerCard[]> {
       .filter(event => event.status === 'UPCOMING')
       .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
 
-    console.log('Upcoming events found:', upcomingEvents.length);
-    for (const event of upcomingEvents) {
-      console.log('Event:', event.name);
-      console.log('Speakers:', event.speakers?.map(s => s.name));
-      console.log('Agenda items with speakers:', event.agenda?.filter(i => i.speaker).map(i => i.speaker));
-      console.log('Days agenda with speakers:', event.days?.flatMap(d => d.agenda ?? []).filter(i => i.speaker).map(i => i.speaker));
-    }
-
     const firstUpcomingEvent = upcomingEvents[0];
     if (!firstUpcomingEvent) return [];
 
@@ -236,7 +228,7 @@ async function fetchUpcomingSpeakerCards(): Promise<SpeakerCard[]> {
       });
     }
 
-    console.log('Speaker cards built:', cards.length);
+
     return cards;
 
   } catch (err) {

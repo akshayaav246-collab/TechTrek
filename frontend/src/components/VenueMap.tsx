@@ -11,6 +11,7 @@ export interface HallLayoutData {
   reserved_rows: string[];
   stage_position: 'front' | 'back';
   entry_points: 'left' | 'right' | 'both';
+  collegeName?: string;
 }
 
 export interface SeatStatus {

@@ -30,7 +30,8 @@ type MappedSpeaker = {
   sessionTimes: string[];
 };
 
-type RegistrationStatus = 'IDLE' | 'REGISTERED' | 'WAITLISTED' | 'ERROR';
+// Extended status to match new backend flow
+type RegistrationStatus = 'IDLE' | 'REGISTERED' | 'WAITLISTED' | 'PENDING_PAYMENT' | 'ERROR';
 
 function getInitials(name: string) {
   return name
@@ -77,7 +78,7 @@ const loadRazorpay = () =>
     document.body.appendChild(script);
   });
 
-function Countdown({ expiresAt }: { expiresAt: string }) {
+function Countdown({ expiresAt, onExpired }: { expiresAt: string; onExpired?: () => void }) {
   const [seconds, setSeconds] = useState(() =>
     Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
   );
@@ -86,12 +87,15 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
     const id = setInterval(() => {
       setSeconds(() => {
         const nextSeconds = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
-        if (nextSeconds <= 0) clearInterval(id);
+        if (nextSeconds <= 0) {
+          clearInterval(id);
+          onExpired?.();
+        }
         return nextSeconds;
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [expiresAt]);
+  }, [expiresAt, onExpired]);
   const m = Math.floor(seconds / 60), s = seconds % 60;
   return <span className="font-mono font-bold text-amber-700">{m}:{String(s).padStart(2, '0')}</span>;
 }
@@ -184,6 +188,17 @@ export function SummitAgenda({
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [showSpotlightBg, setShowSpotlightBg] = useState(false);
   const [showSeatModal, setShowSeatModal] = useState(false);
+  
+  useEffect(() => {
+    if (showSeatModal || showDayModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showSeatModal, showDayModal]);
   const [seatStatuses, setSeatStatuses] = useState<SeatStatus[]>([]);
   const [mySeat, setMySeat] = useState<SeatStatus | null>(null);
   const [seatLoading, setSeatLoading] = useState(false);
@@ -248,15 +263,44 @@ export function SummitAgenda({
     }
   }, [activeSpeaker]);
 
+  // ── On mount: check existing registration status ────────────────────────────
   useEffect(() => {
     if (!user || !token) return;
     fetch(`http://localhost:5000/api/registrations/check/${eventId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
-      .then(data => { if (data.isRegistered) setRegStatus(data.status as RegistrationStatus); })
+      .then(data => {
+        if (data.isRegistered) {
+          setRegStatus(data.status as RegistrationStatus);
+          // If pending payment, open the seat modal so they can continue
+          if (data.status === 'PENDING_PAYMENT' && hallLayout) {
+            openSeatModal();
+          }
+        }
+      })
       .catch(() => {});
   }, [eventId, token, user]);
+
+  // ── Handle seat hold expiry: cleanup on backend + reset UI ─────────────────
+  const handleSeatHoldExpired = async () => {
+    if (!token) return;
+    try {
+      await fetch('http://localhost:5000/api/registrations/cleanup-expired', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ eventId }),
+      });
+    } catch { /* silent */ }
+    setRegStatus('IDLE');
+    setMySeat(null);
+    setSeatMsg('Your seat hold expired. Please register again to select a seat.');
+    // Keep modal open so user sees the message, then close after 3s
+    setTimeout(() => {
+      setShowSeatModal(false);
+      setSeatMsg('');
+    }, 3000);
+  };
 
   useEffect(() => {
     setTimeLeft(getTimeLeft(dateTime));
@@ -270,69 +314,56 @@ export function SummitAgenda({
     slotRefs.current = [];
   }, [activeDay, agenda, days]);
 
-  // ─── Scroll interception ────────────────────────────────────────────────────
-  // The page should reach the Summit Agenda section first. Once the section top
-  // is pinned to the top of the viewport, wheel scrolling is routed into the
-  // agenda panel until that panel reaches its own top/bottom edge.
-  // ──────────────────────────────────────────────────────────────────────────
+  // ── Scroll interception ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const agendaNode = agendaScrollRef.current;
+    const sectionNode = sectionRef.current;
+    if (!agendaNode || !sectionNode) return;
 
-useEffect(() => {
-  const agendaNode = agendaScrollRef.current;
-  const sectionNode = sectionRef.current;
-  if (!agendaNode || !sectionNode) return;
+    const lockY = Math.round(
+      sectionNode.getBoundingClientRect().top + window.scrollY
+    );
 
-  const lockY = Math.round(
-    sectionNode.getBoundingClientRect().top + window.scrollY
-  );
+    const intercepting = { current: false };
 
-  // This ref tracks whether the agenda scroll intercept mode is active.
-  // Set to true when agenda is engaged (scrolling down past lockY).
-  // Set to false when agenda returns to top.
-  const intercepting = { current: false };
+    const handleWheel = (e: WheelEvent) => {
+      const scrollingDown = e.deltaY > 0;
+      const maxScrollTop = agendaNode.scrollHeight - agendaNode.clientHeight;
+      if (maxScrollTop <= 0) return;
 
-  const handleWheel = (e: WheelEvent) => {
-    const scrollingDown = e.deltaY > 0;
-    const maxScrollTop = agendaNode.scrollHeight - agendaNode.clientHeight;
-    if (maxScrollTop <= 0) return;
+      const atBottom = agendaNode.scrollTop >= maxScrollTop - 1;
+      const atTop = agendaNode.scrollTop <= 1;
+      const currentY = window.scrollY;
 
-    const atBottom = agendaNode.scrollTop >= maxScrollTop - 1;
-    const atTop = agendaNode.scrollTop <= 1;
-    const currentY = window.scrollY;
-
-    if (scrollingDown) {
-      // Once page reaches lockY, start intercepting
-      if (currentY >= lockY && !atBottom) {
-        intercepting.current = true;
-        e.preventDefault();
-        e.stopPropagation();
-        agendaNode.scrollTop += e.deltaY;
-        return;
-      }
-      // Agenda exhausted going down — stop intercepting, let page scroll
-      intercepting.current = false;
-    } else {
-      // Scrolling up — if we were intercepting and agenda not at top yet,
-      // keep intercepting WITHOUT any position check (avoids race condition)
-      if (intercepting.current && !atTop) {
-        e.preventDefault();
-        e.stopPropagation();
-        agendaNode.scrollTop += e.deltaY;
-        return;
-      }
-      // Agenda fully unwound — stop intercepting, let page scroll up freely
-      if (atTop) {
+      if (scrollingDown) {
+        if (currentY >= lockY && !atBottom) {
+          intercepting.current = true;
+          e.preventDefault();
+          e.stopPropagation();
+          agendaNode.scrollTop += e.deltaY;
+          return;
+        }
         intercepting.current = false;
+      } else {
+        if (intercepting.current && !atTop) {
+          e.preventDefault();
+          e.stopPropagation();
+          agendaNode.scrollTop += e.deltaY;
+          return;
+        }
+        if (atTop) {
+          intercepting.current = false;
+        }
       }
-    }
-  };
+    };
 
-  window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+    window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
 
-  return () => {
-    window.removeEventListener('wheel', handleWheel, { capture: true });
-  };
-}, []);
-  // ──────────────────────────────────────────────────────────────────────────
+    return () => {
+      window.removeEventListener('wheel', handleWheel, { capture: true });
+    };
+  }, []);
+  // ───────────────────────────────────────────────────────────────────────────
 
   const handleAgendaMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
     const pointerY = e.clientY;
@@ -349,6 +380,7 @@ useEffect(() => {
     if (activeSlot !== null) setActiveSlot(null);
   };
 
+  // ── Register ────────────────────────────────────────────────────────────────
   const handleRegister = async (chosenDays?: number[]) => {
     if (!user || !token) {
       router.push(`/login?redirect=/events/${eventId}`);
@@ -368,15 +400,27 @@ useEffect(() => {
       const data = await res.json();
       if (!res.ok) {
         const message = data.message || 'Registration failed.';
-        if (message.toLowerCase().includes('already registered')) { setRegStatus('REGISTERED'); return; }
+        if (message.toLowerCase().includes('already registered') || data.status === 'REGISTERED') {
+          setRegStatus('REGISTERED');
+          return;
+        }
+        if (message.toLowerCase().includes('pending') || data.status === 'PENDING_PAYMENT') {
+          setRegStatus('PENDING_PAYMENT');
+          if (hallLayout) openSeatModal();
+          return;
+        }
         if (message.toLowerCase().includes('waitlist')) { setRegStatus('WAITLISTED'); return; }
         setRegStatus('ERROR');
         setErrorMsg(message);
         return;
       }
-      setRegStatus(data.isWaitlisted ? 'WAITLISTED' : 'REGISTERED');
-      if (hallLayout && !data.isWaitlisted) {
-        openSeatModal();
+      if (data.isWaitlisted) {
+        setRegStatus('WAITLISTED');
+      } else if (data.isPendingPayment || data.status === 'PENDING_PAYMENT') {
+        setRegStatus('PENDING_PAYMENT');
+        if (hallLayout) openSeatModal();
+      } else {
+        setRegStatus('REGISTERED');
       }
       router.refresh();
     } catch {
@@ -409,11 +453,11 @@ useEffect(() => {
 
     if (mySeat) {
       if (mySeat.status === 'confirmed') {
-        setSeatMsg(`⚠️ You already have seat ${mySeat.seatId} confirmed. You cannot select another seat.`);
+        setSeatMsg(`Seat ${mySeat.seatId} is confirmed. You cannot select another seat.`);
         return;
       }
       if (mySeat.status === 'temp_hold') {
-        setSeatMsg(`ℹ️ You already have seat ${mySeat.seatId} on hold. Confirm or release it first.`);
+        setSeatMsg(`Seat ${mySeat.seatId} is on hold. Confirm or release it first.`);
         return;
       }
     }
@@ -435,10 +479,43 @@ useEffect(() => {
 
   const confirmSeat = async () => {
     if (!mySeat || !token) return;
-    
+
     setSeatLoading(true); setSeatMsg('');
     const PaymentAmount = amount || 500;
-    
+
+    if (process.env.NEXT_PUBLIC_PAYMENT_MODE === 'development') {
+      try {
+        const verifyRes = await fetch('http://localhost:5000/api/payments/verify-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            razorpay_order_id: 'mock_order_dev_' + Date.now(),
+            razorpay_payment_id: 'mock_payment_dev_' + Date.now(),
+            razorpay_signature: 'mock_signature_dev_mode',
+            eventId,
+            seatId: mySeat.seatId
+          })
+        });
+        const verifyData = await verifyRes.json();
+        if (!verifyRes.ok) {
+          setSeatMsg('Mock payment failed. ' + (verifyData.message || ''));
+        } else {
+          setMySeat({ ...verifyData.booking });
+          fetchSeats();
+          setSeatMsg('Mock payment successful! Your seat and registration are confirmed.');
+          setRegStatus('REGISTERED');
+          router.refresh();
+        }
+      } catch (err) {
+        setSeatMsg('Network error validating mock payment.');
+      }
+      setSeatLoading(false);
+      return;
+    }
+
     try {
       // 1. Load Razorpay
       const resRazorpay = await loadRazorpay();
@@ -457,50 +534,54 @@ useEffect(() => {
         },
         body: JSON.stringify({ amount: PaymentAmount, eventId })
       });
-      
+
       const orderData = await orderRes.json();
       if (!orderRes.ok) {
+        console.error('Razorpay order creation failed backend returned:', orderData);
         setSeatMsg(orderData.message || 'Payment initiation failed');
         setSeatLoading(false);
         return;
       }
 
-      // 3. Launch Razorpay CheckOut
+      // 3. Launch Razorpay Checkout
       const options = {
-        key: 'rzp_test_SYcRxORTl39Lek', // Razorpay Test Key ID (will use backend validation via signature)
+        key: 'rzp_test_SYcRxORTI39Lek',
         amount: orderData.amount,
         currency: orderData.currency,
         name: 'TechTrek Events',
         description: `Secure Seat ${mySeat.seatId} for ${eventName}`,
         order_id: orderData.id,
         handler: async function (response: any) {
-           setSeatMsg('Verifying Payment...');
-           // 4. Verify Signature
-           const verifyRes = await fetch('http://localhost:5000/api/payments/verify-payment', {
-             method: 'POST',
-             headers: {
-               'Content-Type': 'application/json',
-               Authorization: `Bearer ${token}`
-             },
-             body: JSON.stringify({
-               razorpay_order_id: response.razorpay_order_id,
-               razorpay_payment_id: response.razorpay_payment_id,
-               razorpay_signature: response.razorpay_signature,
-               eventId,
-               seatId: mySeat.seatId
-             })
-           });
-           
-           const verifyData = await verifyRes.json();
-           if (!verifyRes.ok) {
-             setSeatMsg('Payment Validation Failed.');
-             setSeatLoading(false);
-           } else {
-             setMySeat({ ...verifyData.booking });
-             fetchSeats();
-             setSeatMsg('Payment successful! Your seat is confirmed.');
-             setSeatLoading(false);
-           }
+          setSeatMsg('Verifying payment…');
+          // 4. Verify signature & confirm seat on backend
+          const verifyRes = await fetch('http://localhost:5000/api/payments/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              eventId,
+              seatId: mySeat.seatId
+            })
+          });
+
+          const verifyData = await verifyRes.json();
+          if (!verifyRes.ok) {
+            setSeatMsg('Payment validation failed. Please contact support.');
+            setSeatLoading(false);
+          } else {
+            // Payment done → registration is now REGISTERED
+            setMySeat({ ...verifyData.booking });
+            fetchSeats();
+            setSeatMsg('Payment successful! Your seat and registration are confirmed.');
+            setRegStatus('REGISTERED');
+            setSeatLoading(false);
+            router.refresh();
+          }
         },
         prefill: {
           name: user?.name,
@@ -514,13 +595,13 @@ useEffect(() => {
 
       const rzp = new (window as any).Razorpay(options);
       rzp.on('payment.failed', function (response: any) {
-         setSeatMsg(`Payment Failed: ${response.error.description}`);
-         setSeatLoading(false);
+        setSeatMsg(`Payment failed: ${response.error.description}`);
+        setSeatLoading(false);
       });
       rzp.open();
-      
-    } catch { 
-      setSeatMsg('Network error connecting to payment gateway.'); 
+
+    } catch {
+      setSeatMsg('Network error connecting to payment gateway.');
       setSeatLoading(false);
     }
   };
@@ -534,7 +615,7 @@ useEffect(() => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ eventId, seatId: mySeat.seatId }),
       });
-      if (res.ok) { setMySeat(null); fetchSeats(); setSeatMsg('Seat released.'); }
+      if (res.ok) { setMySeat(null); fetchSeats(); setSeatMsg('Seat released. Choose another seat or close to cancel registration.'); }
     } catch { setSeatMsg('Network error'); }
     finally { setSeatLoading(false); }
   };
@@ -570,6 +651,11 @@ useEffect(() => {
       </div>
     );
   };
+
+  // Derive register button state
+  const isPendingPayment = regStatus === 'PENDING_PAYMENT';
+  const isRegistered = regStatus === 'REGISTERED';
+  const isWaitlisted = regStatus === 'WAITLISTED';
 
   return (
     <>
@@ -723,35 +809,53 @@ useEffect(() => {
                 </div>
               ) : (
                 <>
-                  <button
-                    onClick={handleRegisterClick}
-                    disabled={loading || regStatus === 'REGISTERED'}
-                    className={`group relative z-10 inline-flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border px-5 py-4 text-base font-extrabold uppercase tracking-[0.08em] text-white shadow-[0_4px_15px_rgba(232,99,26,0.4)] transition-all duration-300 ${
-                      loading || regStatus === 'REGISTERED'
-                        ? 'cursor-not-allowed border-white/12 bg-white/12 shadow-none'
-                        : 'border-white/10 bg-gradient-to-r from-[#e8631a] to-[#991B1B] hover:scale-[1.02] hover:shadow-[0_6px_20px_rgba(232,99,26,0.6)]'
-                    }`}
-                  >
-                    {!(loading || regStatus === 'REGISTERED') && (
-                      <span className="absolute top-0 left-0 h-full w-[50%] -translate-x-[150%] skew-x-[-15deg] bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:animate-[shimmer_1.5s_linear_infinite] animate-[shimmer_1.5s_linear_infinite]" />
-                    )}
-                    <span className="relative z-10 flex items-center gap-3">
-                      {loading ? 'Processing...' : regStatus === 'REGISTERED' ? 'Already Registered' : 'Register Now'}
-                      <span className="text-xl transition-transform duration-200 group-hover:translate-x-1">→</span>
-                    </span>
-                  </button>
-                  {regStatus === 'REGISTERED' && hallLayout && (
-                     <button onClick={openSeatModal} className="w-full py-3 mt-3 rounded-2xl border-2 border-[#e8631a]/50 text-[#e8631a] font-bold text-sm hover:bg-[#e8631a] hover:border-[#e8631a] hover:text-white transition-all flex items-center justify-center gap-2">
-                       <SeatIcon className="w-4 h-4" /> Select / View Your Seat
-                     </button>
+                  {/* ── Main Register / Status Button ── */}
+                  {!isRegistered && (
+                    <button
+                      onClick={handleRegisterClick}
+                      disabled={loading || isPendingPayment}
+                      className={`group relative z-10 inline-flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border px-5 py-4 text-base font-extrabold uppercase tracking-[0.08em] text-white shadow-[0_4px_15px_rgba(232,99,26,0.4)] transition-all duration-300 ${
+                        loading || isPendingPayment
+                          ? 'cursor-not-allowed border-white/12 bg-white/12 shadow-none'
+                          : 'border-white/10 bg-gradient-to-r from-[#e8631a] to-[#991B1B] hover:scale-[1.02] hover:shadow-[0_6px_20px_rgba(232,99,26,0.6)]'
+                      }`}
+                    >
+                      {!(loading || isPendingPayment) && (
+                        <span className="absolute top-0 left-0 h-full w-[50%] -translate-x-[150%] skew-x-[-15deg] bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:animate-[shimmer_1.5s_linear_infinite] animate-[shimmer_1.5s_linear_infinite]" />
+                      )}
+                      <span className="relative z-10 flex items-center gap-3">
+                        {loading
+                          ? 'Processing...'
+                          : isPendingPayment
+                            ? 'Registration Pending Payment'
+                            : 'Register Now'}
+                        <span className="text-xl transition-transform duration-200 group-hover:translate-x-1">→</span>
+                      </span>
+                    </button>
                   )}
+
+                  {/* ── Seat Selection Button (visible after REGISTERED or PENDING_PAYMENT with hallLayout) ── */}
+                  {(isRegistered || isPendingPayment) && hallLayout && (
+                    <button
+                      onClick={openSeatModal}
+                      className="w-full py-3 mt-3 rounded-2xl border-2 border-[#e8631a]/50 text-[#e8631a] font-bold text-sm hover:bg-[#e8631a] hover:border-[#e8631a] hover:text-white transition-all flex items-center justify-center gap-2"
+                    >
+                      <SeatIcon className="w-4 h-4" />
+                      {isPendingPayment ? 'Select Seat & Pay to Confirm' : 'View Your Seat'}
+                    </button>
+                  )}
+
                   <p className="relative z-10 mt-3 text-center text-xs text-white/52">
-                    {regStatus === 'REGISTERED' ? 'Your spot is already reserved' : "You'll be asked to sign in first"}
+                    {isRegistered
+                      ? 'Your spot is confirmed'
+                      : isPendingPayment
+                        ? 'Select a seat and complete payment to confirm'
+                        : (!user ? "You'll be asked to sign in first" : "")}
                   </p>
                 </>
               )}
 
-              {regStatus === 'WAITLISTED' && (
+              {isWaitlisted && (
                 <p className="mt-4 text-xs text-amber-300/85">You are currently on the waitlist for this event.</p>
               )}
               {regStatus === 'ERROR' && errorMsg && (
@@ -783,27 +887,41 @@ useEffect(() => {
         />
       )}
 
-      {/* ── Seat Selection Modal ─────────────────────────── */}
+      {/* ── Seat Selection Modal ─────────────────────────────────────────── */}
       {showSeatModal && hallLayout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-3xl z-10">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+        >
+          {/* Modal container — centered, capped at 90vh so it always fits */}
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] md:max-h-[85vh] mt-4"
+          >
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 rounded-t-3xl shrink-0">
               <div>
-                <h2 className="font-heading font-bold text-lg text-gray-900 flex items-center gap-2"><SeatIcon className="w-5 h-5 text-[#e8631a]" /> Choose Your Seat</h2>
+                <h2 className="font-heading font-bold text-lg text-gray-900 flex items-center gap-2">
+                  <SeatIcon className="w-5 h-5 text-[#e8631a]" /> Choose Your Seat
+                </h2>
                 <p className="text-xs text-gray-500 mt-0.5">{hallLayout.hall_name}</p>
               </div>
-              <button onClick={() => setShowSeatModal(false)} className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+              <button
+                onClick={() => setShowSeatModal(false)}
+                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
+              >
                 <XIcon className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-black">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto flex-1 p-6 space-y-4 text-black">
+              {/* Seat summary stats */}
               <div className="flex gap-3 flex-wrap">
                 {[
-                  { label: 'Total',    val: hallLayout.total_rows * hallLayout.seats_per_row,                       color: 'text-gray-700' },
-                  { label: 'Booked',   val: seatStatuses.filter(s => s.status === 'confirmed').length,              color: 'text-red-500' },
-                  { label: 'On Hold',  val: seatStatuses.filter(s => s.status === 'temp_hold').length,             color: 'text-[#e8631a]' },
-                  { label: 'Free',     val: hallLayout.total_rows * hallLayout.seats_per_row - seatStatuses.length, color: 'text-emerald-600' },
+                  { label: 'Total',   val: hallLayout.total_rows * hallLayout.seats_per_row,                        color: 'text-gray-700' },
+                  { label: 'Booked',  val: seatStatuses.filter(s => s.status === 'confirmed').length,               color: 'text-red-500' },
+                  { label: 'On Hold', val: seatStatuses.filter(s => s.status === 'temp_hold').length,              color: 'text-[#e8631a]' },
+                  { label: 'Free',    val: hallLayout.total_rows * hallLayout.seats_per_row - seatStatuses.length,  color: 'text-emerald-600' },
                 ].map(s => (
                   <div key={s.label} className="flex-1 min-w-[70px] bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2 text-center">
                     <p className={`font-extrabold text-xl ${s.color}`}>{s.val}</p>
@@ -812,9 +930,11 @@ useEffect(() => {
                 ))}
               </div>
 
-              {mySeat?.status === 'confirmed' && (
+              {/* Pending payment instruction — only show when no seat held yet */}
+              {isPendingPayment && !mySeat && (
                 <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold flex items-center gap-2">
-                  <span>⚠️</span> You already have <span className="font-extrabold text-[#e8631a]">Seat {mySeat.seatId}</span> confirmed. Seat selection is locked.
+                  <ClockIcon className="w-5 h-5 text-amber-500 shrink-0" />
+                  Select a seat below to lock it for 30 minutes, then pay to confirm.
                 </div>
               )}
 
@@ -829,37 +949,62 @@ useEffect(() => {
               />
 
               {seatMsg && (
-                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${seatMsg.startsWith('⚠️') || seatMsg.startsWith('ℹ️') ? 'bg-amber-50 border border-amber-200 text-amber-800' : seatMsg.includes('released') ? 'bg-blue-50 border border-blue-200 text-blue-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                <div className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                  seatMsg.includes('expired') || seatMsg.includes('failed') || seatMsg.includes('error')
+                    ? 'bg-red-50 border border-red-200 text-red-700'
+                    : seatMsg.includes('released') || seatMsg.includes('confirmed') || seatMsg.includes('successful')
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                      : 'bg-amber-50 border border-amber-200 text-amber-800'
+                }`}>
                   {seatMsg}
                 </div>
               )}
 
               {mySeat && (
-                <div className={`rounded-2xl p-5 border ${mySeat.status === 'confirmed' ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-                  <p className="font-extrabold text-lg text-gray-800 mb-1 flex items-center gap-2">
+                <div className={`rounded-2xl px-4 py-3.5 border flex flex-col gap-2 ${mySeat.status === 'confirmed' ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                  {/* Single combined line: icon + seat id + status */}
+                  <p className="font-extrabold text-base text-gray-800 flex items-center gap-2">
                     {mySeat.status === 'confirmed'
-                      ? <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
-                      : <ClockIcon className="w-5 h-5 text-amber-500" />}
-                    Your Seat: <span className="text-[#e8631a]">{mySeat.seatId}</span>
+                      ? <CheckCircleIcon className="w-5 h-5 text-emerald-600 shrink-0" />
+                      : <ClockIcon className="w-5 h-5 text-amber-500 shrink-0" />}
+                    Your Seat:&nbsp;<span className="text-[#e8631a]">{mySeat.seatId}</span>
+                    {mySeat.status === 'confirmed' && (
+                      <span className="ml-1 text-emerald-700 font-semibold text-sm">Seat confirmed!</span>
+                    )}
                   </p>
+
+                  {/* Hold countdown */}
                   {mySeat.status === 'temp_hold' && mySeat.expiresAt && (
-                    <p className="text-sm text-gray-600 mb-4">Expires in: <Countdown expiresAt={mySeat.expiresAt}/></p>
+                    <p className="text-sm text-amber-700">
+                      Hold expires in: <Countdown expiresAt={mySeat.expiresAt} onExpired={handleSeatHoldExpired} />
+                      <span className="ml-1 text-xs font-medium">— pay before it expires!</span>
+                    </p>
                   )}
-                  {mySeat.status === 'confirmed' && <p className="text-sm text-emerald-700 font-medium mb-4">Seat confirmed! Your booking is secured.</p>}
-                  <div className="flex gap-3">
-                    {mySeat.status === 'temp_hold' && (
-                      <button onClick={confirmSeat} disabled={seatLoading}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-                          {seatLoading ? 'Processing…' : <><CreditCardIcon className="w-4 h-4" /> Confirm Booking (Pay ₹{amount})</>}
+
+                  {/* Action buttons (only for temp_hold) */}
+                  {mySeat.status === 'temp_hold' && (
+                    <>
+                      <p className="text-[11px] text-amber-800/80 mt-1 mb-1 leading-snug">
+                        *Note: A non-refundable processing fee of ₹100 applies if you decide to cancel later.
+                      </p>
+                      <div className="flex gap-3 mt-1">
+                        <button
+                          onClick={confirmSeat}
+                          disabled={seatLoading}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+                        >
+                          {seatLoading ? 'Processing…' : <><CreditCardIcon className="w-4 h-4" /> Pay ₹{amount} & Confirm</>}
                         </button>
-                    )}
-                    {mySeat.status === 'temp_hold' && (
-                      <button onClick={releaseSeat} disabled={seatLoading}
-                        className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold text-sm disabled:opacity-50">
-                        Release
-                      </button>
-                    )}
-                  </div>
+                        <button
+                          onClick={releaseSeat}
+                          disabled={seatLoading}
+                          className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold text-sm disabled:opacity-50"
+                        >
+                          Release
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { CheckCircleIcon, AlertIcon, UsersIcon, BuildingIcon, ZapIcon } from '@/components/Icons';
 
-type Result = { message: string; studentName?: string; studentEmail?: string; college?: string; eventName?: string; alreadyCheckedIn?: boolean; isError?: boolean };
+type Result = { message: string; studentName?: string; studentEmail?: string; college?: string; eventName?: string; seatNo?: string; ticketId?: string; alreadyCheckedIn?: boolean; isError?: boolean };
 
 export default function AdminCheckInPage() {
   const { user, token, isLoading } = useAuth();
@@ -92,6 +92,8 @@ export default function AdminCheckInPage() {
                       <p className="text-sm font-bold text-[#0E1B3D]/80 flex items-center gap-1.5"><UsersIcon className="w-3.5 h-3.5" /> {result.studentName}</p>
                       {result.college && <p className="text-xs text-[#0E1B3D]/60 flex items-center gap-1.5"><BuildingIcon className="w-3 h-3" /> {result.college}</p>}
                       {result.eventName && <p className="text-xs text-[#0E1B3D]/60 flex items-center gap-1.5"><ZapIcon className="w-3 h-3" /> {result.eventName}</p>}
+                      {result.ticketId && <p className="text-xs text-[#0E1B3D]/60 flex items-center gap-1.5"><ZapIcon className="w-3 h-3" /> Ticket: {result.ticketId}</p>}
+                      {result.seatNo && !result.alreadyCheckedIn && <p className="text-xs text-[#e8631a] font-bold flex items-center gap-1.5"><CheckCircleIcon className="w-3 h-3" /> Seat No: {result.seatNo}</p>}
                     </div>
                   )}
                 </div>
@@ -104,11 +106,11 @@ export default function AdminCheckInPage() {
 
           {/* Manual fallback */}
           <details className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-            <summary className="px-5 py-3.5 text-sm font-bold text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2"><ZapIcon className="w-3.5 h-3.5" /> Manual QR Entry</summary>
+            <summary className="px-5 py-3.5 text-sm font-bold text-gray-500 cursor-pointer hover:text-gray-700 flex items-center gap-2"><ZapIcon className="w-3.5 h-3.5" /> Manual Entry, Ticket ID</summary>
             <div className="p-5 pt-0">
-              <textarea value={manual} onChange={e => setManual(e.target.value)} rows={3}
-                placeholder='Paste encrypted QR payload here…'
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-xs font-mono text-gray-700 outline-none focus:border-[#C84B11] resize-none mb-3"/>
+              <input value={manual} onChange={e => setManual(e.target.value)} type="text"
+                placeholder='Enter Ticket ID (e.g. TT-20260407-BT5IUB)'
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-xs font-mono text-gray-700 outline-none focus:border-[#C84B11] mb-3"/>
               <button onClick={() => processQR(manual.trim())} disabled={!manual.trim()}
                 className="w-full bg-[#0E1B3D] text-white font-bold py-2.5 rounded-xl text-sm hover:bg-[#1a2d5a] transition-colors disabled:opacity-40">
                 Submit

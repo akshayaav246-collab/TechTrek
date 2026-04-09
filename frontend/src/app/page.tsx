@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/ui/Section";
 import { Input } from "@/components/ui/Input";
 import IndustryAwareness from "@/components/sections/IndustryAwareness";
+import TestimonialCarousel from "@/components/sections/TestimonialCarousel";
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -36,7 +37,7 @@ async function getFirstUpcomingEvent() {
 
 async function getFeaturedFeedback() {
   try {
-    const res = await fetch('http://localhost:5000/api/events/featured/feedback', { next: { revalidate: 60 } });
+    const res = await fetch('http://localhost:5000/api/events/featured/feedback', { cache: 'no-store' });
     if (!res.ok) return [];
     return await res.json() as FeaturedFeedback[];
   } catch {
@@ -136,105 +137,7 @@ export default async function Home() {
           <p className="text-white/70 text-lg">Hear from past attendees who accelerated their careers.</p>
         </div>
         
-        {/* Infinite CSS Carousel Container */}
-        <div 
-          className="slider w-full max-w-7xl mx-auto" 
-          style={{ 
-            '--width': '400px', 
-            '--height': '280px', 
-            '--quantity': featuredFeedback.length > 0 ? featuredFeedback.length : 5 
-          } as React.CSSProperties}
-        >
-          <div className="list">
-            {(featuredFeedback.length > 0 ? featuredFeedback.map((f) => ({
-              name: f.studentName,
-              uni: f.college,
-              quote: f.comment,
-              eventName: f.eventName,
-            })) : [
-              { name: "Rahul S.", uni: "IIT Delhi", quote: "TechTrek totally changed my perspective on the tech industry. I landed my first internship because of the networks I built here!", eventName: "AI Leadership Summit" },
-              { name: "Priya M.", uni: "VIT Vellore", quote: "The hands-on workshops on Cloud Native architectures gave me the exact skills I needed to stand out in my interviews.", eventName: "Cloud Futures Forum" },
-              { name: "Arjun K.", uni: "NIT Trichy", quote: "Meeting mentors from top enterprises was invaluable. The guidance I received helped me shape my career path in AI.", eventName: "Industry Awareness Summit" },
-              { name: "Neha R.", uni: "KSRCE", quote: "An electrifying experience! The energy, the knowledge sharing, and the community are unmatched. A must-attend for tech enthusiasts.", eventName: "TechTrek Chennai Edition" },
-              { name: "Vikram D.", uni: "BITS Pilani", quote: "I came for the cybersecurity talks and stayed for the incredible networking opportunities. Truly a flagship event.", eventName: "Cyber Resilience Forum" }
-            ]).map((item: { name: string, uni: string, quote: string, eventName?: string }, index: number) => (
-              <div 
-                key={index} 
-                className="item p-4" 
-                style={{ '--position': index + 1 } as React.CSSProperties}
-              >
-                <Card className="bg-white/5 border-white/10 backdrop-blur-sm h-full w-full text-white slider-card shadow-lg flex flex-col justify-center">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center font-bold text-lg shadow-inner">
-                      {item.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-lg">{item.name}</h4>
-                      <span className="text-sm text-primary font-medium">{item.uni}</span>
-                    </div>
-                  </div>
-                  {item.eventName && (
-                    <p className="mb-3 inline-flex w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/70">
-                      {item.eventName}
-                    </p>
-                  )}
-                  <p className="italic text-white/80 leading-snug text-base font-light overflow-hidden text-ellipsis line-clamp-4">&quot;{item.quote}&quot;</p>
-                </Card>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <style>{`
-          .slider {
-            width: 100%;
-            height: var(--height);
-            overflow: hidden;
-            mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
-            -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
-          }
-          .slider .list {
-            display: flex;
-            width: 100%;
-            min-width: calc(var(--width) * var(--quantity));
-            position: relative;
-          }
-          .slider .list .item {
-            width: var(--width);
-            height: var(--height);
-            position: absolute;
-            left: 100%;
-            animation: autoRun 30s linear infinite;
-            transition: transform 0.4s ease, filter 0.4s ease;
-            animation-delay: calc(
-              (30s / var(--quantity)) * (var(--position) - 1) - 30s
-            ) !important;
-            cursor: pointer;
-          }
-          @keyframes autoRun {
-            from { left: 100%; }
-            to { left: calc(var(--width) * -1); }
-          }
-          
-          /* Decrease Speed / Pause on Hover */
-          .slider:hover .item {
-            animation-play-state: paused !important;
-          }
-          
-          /* Enlarge on Hover */
-          .slider .list .item:hover {
-            transform: scale(1.05);
-            z-index: 10;
-          }
-          
-          /* Responsive sizing */
-          @media (max-width: 768px) {
-            .slider {
-              --width: 320px !important;
-              --height: 280px !important;
-            }
-          }
-        `}</style>
+        <TestimonialCarousel featuredFeedback={featuredFeedback} />
       </Section>
 
       {/* Newsletter Section */}

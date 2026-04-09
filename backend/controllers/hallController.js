@@ -26,7 +26,7 @@ exports.createHall = async (req, res) => {
   try {
     const {
       hall_name, total_rows, seats_per_row, aisle_after_seat,
-      reserved_rows, stage_position, entry_points,
+      reserved_rows, stage_position, entry_points, collegeName
     } = req.body;
 
     if (!hall_name || !total_rows || !seats_per_row) {
@@ -39,6 +39,7 @@ exports.createHall = async (req, res) => {
       reserved_rows: reserved_rows || [],
       stage_position: stage_position || 'front',
       entry_points: entry_points || 'both',
+      collegeName: collegeName ? collegeName.trim() : undefined,
       createdBy: req.user._id,
     });
     res.status(201).json(hall);

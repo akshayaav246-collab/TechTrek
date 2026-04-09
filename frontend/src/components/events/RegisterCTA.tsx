@@ -94,11 +94,11 @@ export function RegisterCTA({
     // If student already has a confirmed or held seat, block and notify
     if (mySeat) {
       if (mySeat.status === 'confirmed') {
-        setSeatMsg(`⚠️ You already have seat ${mySeat.seatId} confirmed. You cannot select another seat.`);
+        setSeatMsg(`You already have seat ${mySeat.seatId} confirmed. You cannot select another seat.`);
         return;
       }
       if (mySeat.status === 'temp_hold') {
-        setSeatMsg(`ℹ️ You already have seat ${mySeat.seatId} on hold. Confirm or release it first.`);
+        setSeatMsg(`You already have seat ${mySeat.seatId} on hold. Confirm or release it first.`);
         return;
       }
     }
@@ -338,7 +338,7 @@ export function RegisterCTA({
               {/* Already-booked warning banner */}
               {alreadyBooked && (
                 <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold flex items-center gap-2">
-                  <span>⚠️</span> You already have <span className="font-extrabold text-[#e8631a]">Seat {mySeat!.seatId}</span> confirmed. Seat selection is locked.
+                   You already have <span className="font-extrabold text-[#e8631a]">Seat {mySeat!.seatId}</span> confirmed. Seat selection is locked.
                 </div>
               )}
 

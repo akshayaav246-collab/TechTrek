@@ -16,6 +16,7 @@ type EventReg = {
   _id: string; status: string; qrCode?: string; checkedIn?: boolean; checkedInAt?: string;
   createdAt: string; hasSubmittedFeedback?: boolean; cancelledAt?: string; refundStatus?: string;
   selectedDays?: number[]; totalAmountPaid?: number; seatNumber?: string | null;
+  ticketId?: string;
   event: { eventId: string; name: string; collegeName: string; city: string; venue: string; dateTime: string; status: string; amount?: number };
 };
 
@@ -33,12 +34,13 @@ const statusColor = (s: string) => {
   if (s === 'WAITLISTED') return 'bg-amber-100 text-amber-700 border-amber-200';
   if (s === 'CHECKED_IN') return 'bg-blue-100 text-blue-700 border-blue-200';
   if (s === 'CANCELLED') return 'bg-red-100 text-red-600 border-red-200';
+  if (s === 'PENDING_PAYMENT') return 'bg-orange-100 text-orange-700 border-orange-200';
   return 'bg-gray-100 text-gray-500';
 };
 
 const refundBadge = (status?: string) => {
   if (!status || status === 'NOT_APPLICABLE') return null;
-  if (status === 'PENDING') return { label: 'Refund Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+  if (status === 'PENDING') return { label: 'Refunding…', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
   if (status === 'PROCESSED') return { label: 'Refund Processed', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
   if (status === 'FAILED') return { label: 'Refund Failed', cls: 'bg-red-50 text-red-700 border-red-200' };
   return null;
@@ -270,7 +272,7 @@ export default function ProfilePage() {
     a.download = `techtrek-ticket-${eventId}.png`; a.click();
   };
 
-  const downloadCertificate = (registration: EventReg) => {
+  const downloadCertificate = async (registration: EventReg) => {
     const attendee = displayUser.name;
     const event = registration.event;
     const checkedInDate = registration.checkedInAt
@@ -286,7 +288,7 @@ export default function ProfilePage() {
       ? `successfully attended ${attendanceText}`
       : 'successfully attended and completed participation in';
 
-    const svg = `
+    const svgMarkup = `
       <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1131" viewBox="0 0 1600 1131">
         <defs>
           <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -308,20 +310,43 @@ export default function ProfilePage() {
         <text x="800" y="655" text-anchor="middle" font-family="Georgia, serif" font-size="52" font-weight="700" fill="#e8631a">${event.name}</text>
         <text x="800" y="725" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#0E1B3D">${event.collegeName} · ${event.city}</text>
         <text x="800" y="770" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#7A7166">${checkedInDate}</text>
-        <line x1="230" y1="940" x2="560" y2="940" stroke="#0E1B3D" stroke-width="3" />
-        <line x1="1040" y1="940" x2="1370" y2="940" stroke="#0E1B3D" stroke-width="3" />
-        <text x="395" y="980" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#0E1B3D">TechTrek Team</text>
-        <text x="1205" y="980" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#0E1B3D">Authorized Signatory</text>
+        <line x1="635" y1="940" x2="965" y2="940" stroke="#0E1B3D" stroke-width="3" />
+        <text x="800" y="980" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#0E1B3D">Mr.Sendhil Kumar, Global knowledge technologies.</text>
       </svg>
     `.trim();
 
-    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${registration.event.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-certificate.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      // Dynamically import to keep bundle lean (client-only)
+      const [{ jsPDF }, { svg2pdf }] = await Promise.all([
+        import('jspdf'),
+        import('svg2pdf.js'),
+      ]);
+
+      // Parse SVG string into a real DOM element
+      const parser = new DOMParser();
+      const svgDoc = parser.parseFromString(svgMarkup, 'image/svg+xml');
+      const svgEl = svgDoc.documentElement as unknown as SVGSVGElement;
+
+      // A4 landscape: 297 × 210 mm
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();   // 297
+      const pageH = pdf.internal.pageSize.getHeight();  // 210
+
+      await svg2pdf(svgEl, pdf, { x: 0, y: 0, width: pageW, height: pageH });
+
+      const filename = `${event.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-certificate.pdf`;
+      pdf.save(filename);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      // Fallback: download as SVG
+      const blob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${event.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-certificate.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const submitFeedback = async (e: React.FormEvent) => {
@@ -608,6 +633,15 @@ export default function ProfilePage() {
                             </p>
                           )}
                           
+                          {reg.status !== 'CANCELLED' && reg.ticketId && (
+                            <div className="mt-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                              </svg>
+                              {reg.ticketId}
+                            </div>
+                          )}
+
                           {reg.status === 'CANCELLED' && reg.cancelledAt && (
                             <p className="text-[11px] text-red-500 mt-2 font-medium">
                               Cancelled on {new Date(reg.cancelledAt).toLocaleDateString()}
@@ -642,7 +676,7 @@ export default function ProfilePage() {
                                 'text-primary hover:text-[#d4741a]'
                               }`}
                               title={!isCompleted ? 'Wait for completion' : ''}>
-                              {reg.hasSubmittedFeedback ? 'Feedback Done' : 'Submit Feedback'} <span className="text-sm">💬</span>
+                              {reg.hasSubmittedFeedback ? 'Feedback Done' : 'Submit Feedback'}
                             </button>
                           )}
                           <Link href={`/events/${evt.eventId}`} className="text-[11px] font-black uppercase tracking-wider text-secondary hover:text-primary transition-all flex items-center gap-1 group">
@@ -651,31 +685,7 @@ export default function ProfilePage() {
                         </div>
                       </div>
                       
-                      {/* Expanded QR Inline below card */}
-                      {expandedQR === reg._id && reg.qrCode && (
-                        <div className="px-6 pb-6 bg-white border-t border-border flex flex-col items-center animate-[fadeIn_0.2s_ease-out]">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-foreground/40 mt-4 mb-3">Your Event Pass</p>
-                          <div className="bg-white p-2 rounded-2xl border-2 border-border shadow-sm mb-4">
-                            <Image src={reg.qrCode} alt="QR Code" width={160} height={160} unoptimized className="w-40 h-40 rounded-xl" />
-                          </div>
-                          {reg.seatNumber && (
-                             <div className="mb-4 bg-primary/10 text-primary px-6 py-2 rounded-xl text-lg font-black tracking-widest border border-primary/20 shadow-sm">
-                               SEAT {reg.seatNumber}
-                             </div>
-                          )}
-                          <button onClick={() => downloadQR(reg.qrCode!, evt.eventId)}
-                            className="bg-secondary hover:bg-primary text-white transition-colors px-6 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-wider whitespace-nowrap">
-                            Download Pass
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Cancel Success message inline */}
-                      {isJustCancelled && (
-                        <div className="m-4 mt-0 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 font-medium">
-                          ✅ {cancelSuccess!.message}
-                        </div>
-                      )}
+                      {/* QR button – opens full-screen overlay modal (no clipping) */}
                     </div>
                   );
                 })}
@@ -684,6 +694,92 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* ── QR / Ticket Overlay Modal ─────────────────────────────────────────── */}
+      {expandedQR && (() => {
+        const reg = validRegs.find(r => r._id === expandedQR);
+        if (!reg?.qrCode) return null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+            onClick={() => setExpandedQR(null)}
+          >
+            <div
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden"
+              style={{ maxHeight: 'calc(100vh - 4rem)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+                <p className="text-xs font-black uppercase tracking-widest text-foreground/50">Your Event Pass</p>
+                <button
+                  onClick={() => setExpandedQR(null)}
+                  className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors text-lg leading-none"
+                >×</button>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="overflow-y-auto flex-1 flex flex-col items-center px-6 py-6 gap-5">
+                {/* Event name */}
+                <h3 className="font-heading font-black text-xl text-secondary text-center leading-tight">
+                  {reg.event.name}
+                </h3>
+
+                {/* QR Code */}
+                <div className="bg-white p-3 rounded-2xl border-2 border-border shadow-md">
+                  <Image
+                    src={reg.qrCode}
+                    alt="QR Code"
+                    width={200}
+                    height={200}
+                    unoptimized
+                    className="w-48 h-48 rounded-xl"
+                  />
+                </div>
+
+                {/* Status badge */}
+                <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full border ${statusColor(reg.status)}`}>
+                  {reg.status.replace('_', ' ')}
+                </span>
+
+                {/* Seat number (prominent) */}
+                {reg.seatNumber && (
+                  <div className="w-full bg-primary/10 text-primary px-6 py-3 rounded-2xl text-center text-2xl font-black tracking-widest border border-primary/20 shadow-sm">
+                    SEAT {reg.seatNumber}
+                  </div>
+                )}
+
+                {/* Event details */}
+                <div className="w-full bg-background rounded-2xl border border-border px-4 py-3 space-y-1.5 text-sm">
+                  <p className="text-secondary/70 font-bold">{reg.event.collegeName} · {reg.event.city}</p>
+                  <p className="text-secondary/60 flex items-center gap-1.5 font-medium">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                    </svg>
+                    {new Date(reg.event.dateTime).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                  <p className="text-secondary/60 flex items-center gap-1.5 font-medium">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    {reg.event.venue}
+                  </p>
+                </div>
+
+                {/* Download button */}
+                <button
+                  onClick={() => downloadQR(reg.qrCode!, reg.event.eventId)}
+                  className="w-full bg-secondary hover:bg-primary text-white transition-colors px-6 py-3 rounded-xl font-bold text-[11px] uppercase tracking-wider"
+                >
+                  Download Pass
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
+
