@@ -218,7 +218,7 @@ export function SummitAgenda({
       name: s.name,
       role: s.company ? `${s.role}, ${s.company}` : s.role,
       bio: s.bio,
-      tags: s.tags?.length ? s.tags : ['Speaker', 'TechTrek'],
+      tags: s.tags?.length ? s.tags : [],
       initials: getInitials(s.name),
       sessionTimes: [] as string[],
     }));

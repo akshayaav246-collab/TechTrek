@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import './Loader.css';
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&display=swap" rel="stylesheet" />
 
 type Spark = {
   id: number;
@@ -40,6 +41,7 @@ export default function Loader({ onDone }: LoaderProps) {
     <div className="loader-overlay">
       <div className="loader-bg" />
       <div className="loader-grid" />
+      <div className="loader-glow" /> 
 
       <div className="loader-sparks">
         {sparks.map((s) => (
@@ -60,9 +62,14 @@ export default function Loader({ onDone }: LoaderProps) {
 
       <div className="loader-logo">
         <div className="loader-logo-text">
-          <span className="loader-accent">Tech</span>Trek
-        </div>
-        <div className="loader-year">2 0 2 6</div>
+  <span className="loader-accent">Tech</span>
+  <span className="loader-slash">/</span>Trek
+</div>
+<div className="loader-bar-accent">
+  <div className="loader-bar-line" />
+  <div className="loader-year">2 0 2 6</div>
+  <div className="loader-bar-line" />
+</div>
       </div>
 
       <div className="loader-tagline">Ignite Your Imagination</div>
@@ -76,4 +83,7 @@ export default function Loader({ onDone }: LoaderProps) {
       </div>
     </div>
   );
+  
 }
+
+
