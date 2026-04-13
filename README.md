@@ -30,7 +30,7 @@ The main goal of TechTrek is to provide a seamless event lifecycle platform: fro
 - **Utilities:** Nodemailer (Emails), `qrcode`
 
 ### AI & Integrations
-- **Generative AI:** Anthropic Claude (3.5 Sonnet) API
+- **Generative AI:** Google's Gemini
 - **Web Scraping:** Apify (for LinkedIn Speakers context injection, if applicable)
 
 ---
@@ -60,8 +60,8 @@ The main goal of TechTrek is to provide a seamless event lifecycle platform: fro
 - **Certificate Generation**: Puppeteer asynchronously builds dynamic certificates post-event once attendees leave their feedback.
 
 ### 6. AI Studio (Admin) 🤖
-- **Speaker Extractor**: Parse unstructured text or LinkedIn URLs into comprehensive speaker objects (Name, Bio, Role, Tags, Match Scores) using Claude AI.
-- **Agenda Builder**: Describe an event agenda in natural language and have Claude intelligently map out topics and assign the most suitable internal speakers.
+- **Speaker Extractor**: Parse unstructured text or LinkedIn URLs into comprehensive speaker objects (Name, Bio, Role, Tags, Match Scores) using Gemini AI.
+
 
 ### 7. Feedback Curation Engine
 - Students provide feedback.
@@ -165,6 +165,8 @@ Under `/backend/models`:
    # Payments
    RAZORPAY_KEY_ID=...
    RAZORPAY_KEY_SECRET=...
+   GEMINI_API_KEY=...
+   APIFY_API_KEY=...
    ```
 4. Run the Dev server:
    ```bash
@@ -191,6 +193,6 @@ Under `/backend/models`:
 
 ## AI in the Project
 
-The platform heavily innovates on standard workflows by utilizing Anthropic's Claude 3.5 Sonnet to completely bypass manual data entry for large conferences.
-1. **AI Studio - Speaker Extractor (`/admin/ai-studio`)**: Admins can paste raw text or a LinkedIn URL. A dedicated prompt asks Claude to parse the text into a well-structured JSON document, deducing their expertise (`tags`), seniority hierarchy, and scoring their proficiency (Keynotes vs Panels vs Workshops).
-2. **AI Studio - Agenda Builder`: Admins type out a rough skeleton (e.g. "9am keynote on AI, 11am panel on startups, lunch at 1pm"). Claude reconstructs this mathematically, fetches all imported speakers, maps the highest suited speaker to an exact time slot based on their previously extracted skill `matchScore` avoiding overlapping conflicts, generating a perfect agenda schedule instantly.
+The platform heavily innovates on standard workflows by utilizing Google's Gemini to completely bypass manual data entry for large conferences.
+1. **AI Studio - Speaker Extractor (`/admin/ai-studio`)**: Admins can paste raw text or a LinkedIn URL. A dedicated prompt asks Gemini to parse the text into a well-structured JSON document, deducing their expertise (`tags`), seniority hierarchy, and scoring their proficiency (Keynotes vs Panels vs Workshops).
+
