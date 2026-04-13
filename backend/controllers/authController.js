@@ -30,9 +30,21 @@ const signup = async (req, res) => {
     const upcomingEvents = await Event.find({ status: 'UPCOMING' }).select('collegeName collegeDomain -_id');
     if (upcomingEvents.length > 0) {
       const validColleges = upcomingEvents.map(e => e.collegeName.toLowerCase().trim());
-      if (!validColleges.includes(college?.toLowerCase().trim())) {
+      const matchedEvent = upcomingEvents.find(e => e.collegeName.toLowerCase().trim() === college?.toLowerCase().trim());
+      
+      if (!matchedEvent) {
         return res.status(400).json({
           message: 'Signup is currently only available for students from colleges hosting an upcoming TechTrek event. Please check back later.'
+        });
+      }
+
+      // Domain mismatch check
+      const expectedDomain = matchedEvent.collegeDomain?.toLowerCase().trim();
+      const providedDomain = domain?.toLowerCase().trim();
+
+      if (expectedDomain && providedDomain && expectedDomain !== providedDomain) {
+        return res.status(400).json({
+          message: `Email domain must match your college (${expectedDomain}).`
         });
       }
     }

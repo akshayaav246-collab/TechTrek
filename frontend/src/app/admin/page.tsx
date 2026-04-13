@@ -66,9 +66,9 @@ const renderTrend = (trendStr: string) => {
   const [, prefix = '', value = '', suffix = ''] = match;
   return (
     <>
-      <span className="text-[14px] font-black leading-none">{prefix.trim()}</span>
-      <span className="text-[16px] font-black leading-none">{value}</span>
-      <span className="text-[12px] font-extrabold leading-none">{suffix}</span>
+      <span className="text-[12px] font-bold leading-none">{prefix.trim()}</span>
+      <span className="text-[13px] font-bold leading-none">{value}</span>
+      <span className="text-[11px] font-bold leading-none">{suffix}</span>
     </>
   );
 };
@@ -134,7 +134,7 @@ const Metric = ({
   labelColor,
   onClick,
 }: {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   label: string;
   value: string | number;
   trendStr: string;
@@ -146,19 +146,20 @@ const Metric = ({
   <button
     type="button"
     onClick={onClick}
-    className={`bg-[#FFFFFF] rounded-2xl p-6 ${accent} border border-[#E2D8CC] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between h-[160px] relative group overflow-hidden hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left w-full`}
+    className={`bg-[#FFFFFF] rounded-xl p-5 border border-[#E2D8CC] ${accent} flex flex-col justify-between h-[130px] w-full text-left transition-all hover:bg-gray-50/50`}
   >
-    <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-    <div className="flex justify-between items-center relative z-10 w-full border-b border-[#FAF7F2] pb-4">
-      <p className={`text-[13px] font-[DM_Sans] font-bold ${labelColor} tracking-wide uppercase`}>{label}</p>
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FAF7F2] border border-[#E2D8CC] shadow-sm shrink-0">
-        {icon}
-      </div>
+    <div className="flex justify-between items-start w-full">
+      <p className={`text-[13px] font-medium ${labelColor} tracking-wide`}>{label}</p>
+      {icon && (
+        <div className={`w-5 h-5 flex items-center justify-center shrink-0 ${labelColor}`}>
+          {icon}
+        </div>
+      )}
     </div>
-    <div className="relative z-10 flex items-end justify-between mt-auto pt-2">
-      <p className="font-[Syne] font-[800] text-[40px] text-[#1C1A17] leading-none animate-in zoom-in-50 duration-500 delay-100">{value}</p>
+    <div className="flex items-end justify-between mt-auto">
+      <p className="font-bold text-[28px] text-[#1C1A17] leading-none">{value}</p>
       {trendStr && (
-        <span className={`text-[12px] font-[DM_Sans] font-bold px-3.5 py-2 mb-1 rounded-full ${trendColor} shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap`}>
+        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${trendColor} shrink-0 inline-flex items-center gap-1 whitespace-nowrap border-none`}>
           {renderTrend(trendStr)}
         </span>
       )}
@@ -280,7 +281,7 @@ export default function AdminPage() {
   if (regsLastMonth > 0) {
     const p = Math.round(((regsThisMonth - regsLastMonth) / regsLastMonth) * 100);
     regTrendStr = `${p > 0 ? '↑' : '↓'} ${Math.abs(p)}%`;
-    regTrendColor = p >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600";
+    regTrendColor = p >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-600";
   } else if (regsThisMonth > 0) regTrendStr = "↑ 100%";
 
   const revThisMonth = events.filter(e => new Date(e.dateTime).getMonth() === thisMonth && new Date(e.dateTime).getFullYear() === thisYear).reduce((acc, e) => acc + e.revenue, 0);
@@ -289,7 +290,7 @@ export default function AdminPage() {
   if (revLastMonth > 0) {
     const p = Math.round(((revThisMonth - revLastMonth) / revLastMonth) * 100);
     revTrendStr = `${p > 0 ? '↑' : '↓'} ${Math.abs(p)}%`;
-    revTrendColor = p >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600";
+    revTrendColor = p >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-600";
   } else if (revThisMonth > 0) revTrendStr = "↑ 100%";
 
   const topEventsByReg = [...events].sort((a,b)=>b.registeredCount - a.registeredCount).slice(0, 5);
@@ -373,7 +374,7 @@ export default function AdminPage() {
       title="Dashboard"
       headerActions={
         <Link href="/admin/create-event"
-          className="bg-gradient-to-r from-[#C84B11] to-[#E8622A] text-white px-6 py-2.5 rounded-xl font-[DM_Sans] font-bold text-sm hover:brightness-110 transition-all shadow-[0_4px_14px_rgba(200,75,17,0.3)] hover:shadow-[0_6px_20px_rgba(200,75,17,0.5)] w-full sm:w-auto text-center flex items-center justify-center gap-2">
+          className="bg-gradient-to-r from-[#C84B11] to-[#E8622A] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:brightness-110 transition-all shadow-[0_4px_14px_rgba(200,75,17,0.3)] hover:shadow-[0_6px_20px_rgba(200,75,17,0.5)] w-full sm:w-auto text-center flex items-center justify-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
           Create Event
         </Link>
@@ -384,58 +385,58 @@ export default function AdminPage() {
         {/* ── Row 1: KPI Cards ─────────────────────────────────── */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-[#FFFFFF] rounded-2xl min-h-[140px] animate-pulse border border-[#E2D8CC]" />)}
+            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-[#FFFFFF] rounded-xl min-h-[130px] animate-pulse border border-[#E2D8CC]" />)}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both">
             <Metric 
-              label="Total Events" 
+              label="Total events" 
               value={summary?.totalEvents || events.length} 
               trendStr={`↑ ${eventsThisMonth} this month`} 
-              trendColor="bg-[#FAF7F2] text-[#C84B11] border border-[#E2D8CC]" 
+              trendColor="bg-[#FAF7F2] text-[#C84B11]" 
               accent="border-t-[3px] border-t-[#C84B11]" 
               labelColor="text-[#C84B11]"
               onClick={() => setActiveKpi('events')}
               icon={<svg className="w-5 h-5 text-[#C84B11]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} 
             />
             <Metric 
-              label="Active Events" 
+              label="Active events" 
               value={summary?.upcoming || 0} 
               trendStr={`↑ ${activeEventsWeek} this week`} 
-              trendColor="bg-[#FAF7F2] text-[#1A4A7A] border border-[#E2D8CC]" 
+              trendColor="bg-[#e2e8f0] text-[#1e293b]" 
               accent="border-t-[3px] border-t-[#1A4A7A]" 
               labelColor="text-[#1A4A7A]"
               onClick={() => setActiveKpi('active')}
               icon={<svg className="w-5 h-5 text-[#1A4A7A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} 
             />
             <Metric 
-              label="Total Registrations" 
+              label="Total registrations" 
               value={summary?.totalRegistrations || 0} 
               trendStr={regTrendStr} 
-              trendColor={regTrendColor.includes('emerald') ? "bg-[#FAF7F2] text-[#C84B11] border border-[#E2D8CC]" : "bg-[#FAF7F2] text-[#7A7166] border border-[#E2D8CC]"} 
-              accent="border-t-[3px] border-t-[#C84B11]" 
-              labelColor="text-[#C84B11]"
+              trendColor={regTrendColor.includes('emerald') ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-600"} 
+              accent="border-t-[3px] border-t-[#9e1b4b]" 
+              labelColor="text-[#9e1b4b]"
               onClick={() => setActiveKpi('registrations')}
-              icon={<svg className="w-5 h-5 text-[#C84B11]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>} 
+              icon={<svg className="w-5 h-5 text-[#9e1b4b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>} 
             />
             <Metric 
-              label="Revenue Generated" 
+              label="Revenue generated" 
               value={formatRevenue(summary?.totalRevenue || 0)} 
               trendStr={revTrendStr} 
-              trendColor={revTrendColor.includes('emerald') ? "bg-[#FAF7F2] text-[#1A4A7A] border border-[#E2D8CC]" : "bg-[#FAF7F2] text-[#7A7166] border border-[#E2D8CC]"} 
-              accent="border-t-[3px] border-t-[#1A4A7A]" 
-              labelColor="text-[#1A4A7A]"
+              trendColor={revTrendColor.includes('emerald') ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-600"} 
+              accent="border-t-[3px] border-t-[#e8622a]" 
+              labelColor="text-[#e8622a]"
               onClick={() => setActiveKpi('revenue')}
-              icon={<svg className="w-5 h-5 text-[#1A4A7A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} 
+              icon={<svg className="w-5 h-5 text-[#e8622a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} 
             />
           </div>
         )}
 
         {liveAlerts.length > 0 && (
-          <div className="bg-white rounded-2xl border border-[#E2D8CC] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="bg-white mx-1 my-2 rounded-xl border border-[#E2D8CC] p-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
-                <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Live Alerts</h2>
+                <h2 className="font-bold text-lg text-[#1C1A17]">Live alerts</h2>
                 <p className="text-xs text-[#7A7166]">Unauthorized scans, cancellations, and promotions appear here in real time.</p>
               </div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C84B11] bg-[#FAF7F2] border border-[#E2D8CC] px-2.5 py-1 rounded-md">SSE</span>
@@ -453,114 +454,27 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 fill-mode-both">
-          <div className="px-6 py-5 border-b border-[#FAF7F2] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Feedback Curation</h2>
-              <p className="text-sm text-[#7A7166] mt-1">Pick which student quotes appear on the landing page and which stay on event detail pages.</p>
-            </div>
-            <div className="grid grid-cols-3 gap-3 md:min-w-[360px]">
-              <div className="rounded-2xl border border-[#E2D8CC] bg-[#FAF7F2] px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#7A7166]">Collected</p>
-                <p className="mt-1 text-2xl font-[Syne] font-[800] text-[#1C1A17]">{feedbackCuration?.summary.totalFeedback || 0}</p>
-              </div>
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700/70">Landing</p>
-                <p className="mt-1 text-2xl font-[Syne] font-[800] text-emerald-700">{feedbackCuration?.summary.landingSelected || 0}</p>
-              </div>
-              <div className="rounded-2xl border border-[#1A4A7A]/10 bg-[#1A4A7A]/5 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1A4A7A]/60">Event Pages</p>
-                <p className="mt-1 text-2xl font-[Syne] font-[800] text-[#1A4A7A]">{feedbackCuration?.summary.eventPageSelected || 0}</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-6">
-            {!feedbackCuration || feedbackCuration.events.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[#E2D8CC] bg-[#FAF7F2]/70 px-6 py-10 text-center">
-                <p className="font-bold text-[#1C1A17]">No completed events with feedback yet.</p>
-                <p className="text-sm text-[#7A7166] mt-2">Once students submit feedback for completed events, you can curate quotes here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                {feedbackCuration.events.map((event) => (
-                  <div key={event.eventId} className="rounded-[1.75rem] border border-[#E2D8CC] bg-[#FFFCF8] p-5 shadow-sm">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-[Syne] font-[800] text-xl text-[#1C1A17]">{event.name}</p>
-                        <p className="text-sm text-[#7A7166] mt-1">
-                          {new Date(event.dateTime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          {event.venue ? ` • ${event.venue}` : event.city ? ` • ${event.city}` : ''}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/admin/events/${event.eventId}?tab=media#feedback-curation`}
-                        className="rounded-xl bg-[#0E1B3D] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-[#1A4A7A]"
-                      >
-                        Curate
-                      </Link>
-                    </div>
-                    <div className="mt-4 grid grid-cols-3 gap-3">
-                      <div className="rounded-2xl bg-white px-3 py-3 border border-[#E2D8CC]">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#7A7166]">Total</p>
-                        <p className="mt-1 text-xl font-[Syne] font-[800] text-[#1C1A17]">{event.totalFeedback}</p>
-                      </div>
-                      <div className="rounded-2xl bg-emerald-50 px-3 py-3 border border-emerald-100">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700/70">Landing</p>
-                        <p className="mt-1 text-xl font-[Syne] font-[800] text-emerald-700">{event.landingSelected}</p>
-                      </div>
-                      <div className="rounded-2xl bg-[#1A4A7A]/5 px-3 py-3 border border-[#1A4A7A]/10">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#1A4A7A]/60">Event</p>
-                        <p className="mt-1 text-xl font-[Syne] font-[800] text-[#1A4A7A]">{event.eventPageSelected}</p>
-                      </div>
-                    </div>
-                    <div className="mt-5 space-y-3">
-                      {event.preview.length === 0 ? (
-                        <p className="text-sm text-[#7A7166]">No feedback submitted for this event yet.</p>
-                      ) : (
-                        event.preview.map((item) => (
-                          <div key={item._id} className="rounded-2xl border border-[#E2D8CC] bg-white px-4 py-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="font-bold text-[#1C1A17]">{item.studentName}</p>
-                                <p className="text-xs text-[#7A7166]">{item.college}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                {item.isApprovedForLanding && <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Landing</span>}
-                                {item.isApprovedForEventPage && <span className="rounded-full bg-[#1A4A7A]/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1A4A7A]">Event</span>}
-                              </div>
-                            </div>
-                            <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-[#5F574E]">&quot;{item.comment}&quot;</p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* ── Row 2: Top Events by Reg & Revenue Breakdown ────────────── */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 shrink-0">
-            <div className="bg-white rounded-2xl h-56 animate-pulse" /><div className="bg-white rounded-2xl h-56 animate-pulse" />
+            <div className="bg-white rounded-xl h-56 animate-pulse border border-[#E2D8CC]" /><div className="bg-white rounded-xl h-56 animate-pulse border border-[#E2D8CC]" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
-            
             {/* Top Events by Registrations */}
-            <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] p-6 h-[270px] flex flex-col hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
-              <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17] mb-6">Top Events by Registrations</h2>
-              <div className="flex-1 overflow-y-auto pr-2 space-y-5 font-[DM_Sans]">
-                {topEventsByReg.map((evt) => {
+            <div className="bg-[#FFFFFF] rounded-xl border border-[#E2D8CC] p-6 h-[270px] flex flex-col hover:bg-gray-50/20 transition-all">
+              <h2 className="font-bold text-md text-[#1a202c] mb-6">Top events by registrations</h2>
+              <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                {topEventsByReg.length === 0 ? (
+                  <p className="text-gray-400 text-sm">No other events to compare yet.</p>
+                ) : topEventsByReg.map((evt) => {
                   return (
                     <div key={evt.eventId} className="flex items-center gap-4 group">
-                      <span className="w-40 truncate text-sm font-bold text-[#7A7166] group-hover:text-[#1C1A17] transition-colors">{evt.name}</span>
-                      <div className="flex-1 h-3 bg-[#FAF7F2] rounded-full overflow-hidden">
-                        <div className={`h-full bg-gradient-to-r from-[#C84B11] to-[#E8622A] rounded-full animate-fill-bar`} style={{'--target-width': `${Math.round((evt.registeredCount/maxReg)*100)}%`} as React.CSSProperties} />
+                      <span className="w-[30%] truncate text-sm text-[#4a5568] group-hover:text-[#1C1A17] transition-colors">{evt.name}</span>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full bg-[#C84B11] rounded-full animate-fill-bar`} style={{'--target-width': `${Math.round((evt.registeredCount/maxReg)*100)}%`} as React.CSSProperties} />
                       </div>
-                      <span className="w-12 text-right text-sm font-[Syne] font-[800] text-[#1C1A17]">{evt.registeredCount}</span>
+                      <span className="w-8 text-right text-sm font-bold text-[#1C1A17]">{evt.registeredCount}</span>
                     </div>
                   );
                 })}
@@ -568,17 +482,26 @@ export default function AdminPage() {
             </div>
 
             {/* Revenue Breakdown */}
-            <div className="bg-[#FFFFFF] rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] p-6 h-[270px] flex flex-col hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
-              <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17] mb-6">Revenue Breakdown</h2>
-              <div className="flex-1 overflow-y-auto pr-2 space-y-5 font-[DM_Sans]">
-                {topEventsByRev.map((evt) => {
+            <div className="bg-[#FFFFFF] rounded-xl border border-[#E2D8CC] p-6 h-[270px] flex flex-col hover:bg-gray-50/20 transition-all">
+              <h2 className="font-bold text-md text-[#1a202c] mb-6">Revenue breakdown</h2>
+              <div className="flex-1 overflow-y-auto pr-2 space-y-5">
+                {topEventsByRev.every(e => e.revenue === 0) ? (
+                  <>
+                    <div className="flex items-center gap-4 group">
+                      <span className="w-[30%] truncate text-sm text-[#4a5568]">TechTrek 2026</span>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden" />
+                      <span className="w-8 text-right text-sm font-bold text-[#1C1A17]">₹0</span>
+                    </div>
+                    <p className="text-gray-400 text-sm mt-4">Revenue tracking will reflect once paid registrations are processed.</p>
+                  </>
+                ) : topEventsByRev.map((evt) => {
                   return (
                     <div key={evt.eventId} className="flex items-center gap-4 group">
-                      <span className="w-40 truncate text-sm font-bold text-[#7A7166] group-hover:text-[#1C1A17] transition-colors">{evt.name}</span>
-                      <div className="flex-1 h-3 bg-[#FAF7F2] rounded-full overflow-hidden">
-                        <div className={`h-full bg-gradient-to-r from-[#1A4A7A] to-[#4A90D9] rounded-full animate-fill-bar`} style={{'--target-width': `${Math.round((evt.revenue/maxRev)*100)}%`} as React.CSSProperties} />
+                      <span className="w-[30%] truncate text-sm text-[#4a5568] group-hover:text-[#1C1A17] transition-colors">{evt.name}</span>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full bg-[#1A4A7A] rounded-full animate-fill-bar`} style={{'--target-width': `${Math.round((evt.revenue/maxRev)*100)}%`} as React.CSSProperties} />
                       </div>
-                      <span className="w-16 text-right text-sm font-[Syne] font-[800] text-[#1C1A17]">{formatRevenue(evt.revenue)}</span>
+                      <span className="w-16 text-right text-sm font-bold text-[#1C1A17]">{formatRevenue(evt.revenue)}</span>
                     </div>
                   );
                 })}
@@ -591,14 +514,17 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-[320px] animate-in fade-in slide-in-from-bottom-8 duration-500 delay-200 fill-mode-both">
           
           {/* Upcoming Events */}
-          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 min-h-[320px] lg:min-h-0">
+          <div className="bg-[#FFFFFF] rounded-xl border border-[#E2D8CC] flex flex-col overflow-hidden h-full min-h-[320px] lg:min-h-0 relative">
             <div className="px-6 py-5 border-b border-[#FAF7F2] flex justify-between items-center shrink-0">
-              <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Upcoming Events</h2>
-              <Link href="/admin/events" className="text-[#C84B11] text-[11px] px-3 py-1.5 bg-[#FAF7F2] rounded-lg font-[DM_Sans] font-bold uppercase tracking-wider hover:brightness-110">View All →</Link>
+              <h2 className="font-bold text-md text-[#1a202c]">Upcoming events</h2>
+              <Link href="/admin/events" className="text-[#C84B11] text-[13px] hover:underline">View all →</Link>
             </div>
-            <div className="flex-1 overflow-y-auto font-[DM_Sans]">
-              {events.length === 0 ? (
-                <p className="text-center text-[#7A7166] text-xs py-10 font-medium">No events yet.</p>
+            <div className="flex-1 overflow-y-auto">
+              {events.filter(e => e.status === 'UPCOMING').length === 0 ? (
+                <p className="text-center text-[#7A7166] text-xs py-10 font-medium">
+                  <div className="flex items-center justify-center p-3 w-10 h-10 mx-auto rounded-lg bg-red-50 text-red-400 border border-red-100 mb-3"><svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg></div>
+                  No upcoming events scheduled.<br/>Create one to get started.
+                </p>
               ) : (
                 <div className="divide-y divide-[#FAF7F2]">
                   {events.filter(e => e.status === 'UPCOMING').slice(0, 5).map(evt => {
@@ -614,7 +540,7 @@ export default function AdminPage() {
                         <div className="flex justify-between items-center text-xs">
                           <span className="text-[#7A7166] truncate pr-2 max-w-[200px]">{evt.city}</span>
                           <span className="font-bold text-[#7A7166]">
-                            <span className="text-[#1C1A17] font-[Syne] text-sm">{evt.registeredCount}</span> / {evt.capacity}
+                            <span className="text-[#1C1A17] text-sm">{evt.registeredCount}</span> / {evt.capacity}
                           </span>
                         </div>
                       </div>
@@ -626,11 +552,11 @@ export default function AdminPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 min-h-[320px] lg:min-h-0">
-            <div className="px-6 py-5 border-b border-[#FAF7F2] shrink-0">
-              <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Recent Activity</h2>
-            </div>
-            <div className="flex-1 overflow-y-auto font-[DM_Sans]">
+          <div className="bg-[#FFFFFF] rounded-xl border border-[#E2D8CC] flex flex-col overflow-hidden h-full min-h-[320px] lg:min-h-0">
+            <Link href="/admin/activity" className="px-6 py-5 border-b border-[#FAF7F2] shrink-0 block hover:bg-gray-50/50 transition-colors">
+              <h2 className="font-bold text-md text-[#1a202c]">Recent activity</h2>
+            </Link>
+            <div className="flex-1 overflow-y-auto">
               {activity.length === 0 ? (
                 <p className="text-center text-[#7A7166] text-xs py-10 font-medium">No activity yet</p>
               ) : (
@@ -663,27 +589,27 @@ export default function AdminPage() {
           </div>
 
           {/* Top Cities */}
-          <div className="bg-[#FFFFFF] rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#E2D8CC] flex flex-col overflow-hidden h-full hover:-translate-y-[3px] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 min-h-[320px] lg:min-h-0">
+          <div className="bg-[#FFFFFF] rounded-xl border border-[#E2D8CC] flex flex-col overflow-hidden h-full min-h-[320px] lg:min-h-0">
             <div className="px-6 py-5 border-b border-[#FAF7F2] flex justify-between items-center shrink-0">
-              <h2 className="font-[Syne] font-[800] text-lg text-[#1C1A17]">Top Cities</h2>
-              <span className="text-[10px] font-[DM_Sans] font-bold uppercase tracking-wider text-[#7A7166] bg-[#FAF7F2] border border-[#E2D8CC] px-2.5 py-1 rounded-md">By Reg</span>
+              <h2 className="font-bold text-md text-[#1a202c]">Top cities</h2>
+              <span className="text-[12px] text-gray-500">by reg.</span>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 font-[DM_Sans]">
+            <div className="flex-1 overflow-y-auto p-6">
               {topCities.length === 0 ? (
-                <p className="text-[#7A7166] text-xs text-center py-6 font-medium">No city data yet</p>
+                <p className="text-gray-400 text-sm py-6">More cities will appear as registrations grow.</p>
               ) : (
                 <div className="space-y-6">
                   {topCities.map((c, i) => (
                     <div key={c.city} className="group">
                       <div className="flex justify-between items-center text-sm mb-3">
-                        <span className="font-bold text-[#1C1A17] flex items-center gap-3">
-                          <span className="text-[#C84B11] font-[Syne] font-[800] text-sm md:text-[15px]">#{i + 1}</span> 
+                        <span className="font-medium text-[#1a202c] flex items-center gap-2">
+                          <span className="text-gray-400 font-bold text-sm">#{i + 1}</span> 
                           <span className="text-[14px]">{c.city}</span>
                         </span>
-                        <span className="text-[#7A7166] font-bold text-xs"><span className="text-[#1C1A17] font-[Syne] text-sm">{c.count}</span></span>
+                        <span className="text-gray-600 text-sm font-medium">{c.count}</span>
                       </div>
-                      <div className="h-3 bg-[#FAF7F2] rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-[#1A4A7A] to-[#4A90D9] rounded-full animate-fill-bar"
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#1A4A7A] rounded-full animate-fill-bar"
                           style={{ '--target-width': `${Math.round((c.count / maxCity) * 100)}%` } as React.CSSProperties} />
                       </div>
                     </div>
@@ -694,6 +620,7 @@ export default function AdminPage() {
           </div>
 
         </div>
+
       </div>
       {/* ── KPI Detail Modal ─────────────────────────────────────── */}
       {activeKpiConfig && (

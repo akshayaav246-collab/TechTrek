@@ -6,22 +6,38 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneRegex = /^[0-9]{10}$/;
-
 function validateEmail(v: string) {
-  return emailRegex.test(v.trim()) ? '' : 'Please enter a valid email address.';
+  if (!v) return 'Email is required.';
+  if (v.length > 254) return 'Email exceeds maximum length of 254 characters.';
+  if (/\s/.test(v)) return 'Email must not contain spaces.';
+  
+  const email = v.trim();
+  if (email.includes('..')) return 'Email must not contain consecutive dots.';
+  if (/^[.-]/.test(email) || /[.-]@/.test(email) || /@[.-]/.test(email) || /[.-]$/.test(email)) {
+    return 'Email must not start or end with a dot or hyphen.';
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email) ? '' : 'Please enter a valid email address.';
 }
+
 function validatePhone(v: string) {
-  return phoneRegex.test(v.trim()) ? '' : 'Phone number must be exactly 10 digits.';
+  if (!v) return 'Phone number is required.';
+  const phone = v.trim();
+  if (!/^\d+$/.test(phone)) return 'Phone number must contain digits only.';
+  if (phone.length !== 10) return 'Indian mobile numbers are strictly 10 digits.';
+  if (!/^[6-9]\d{9}$/.test(phone)) return 'Valid Indian mobile numbers must start with 6, 7, 8, or 9.';
+  if (/^(\d)\1{9}$/.test(phone)) return 'Phone number cannot be all repeating digits.';
+  return '';
 }
 
 // ─── Input ───────────────────────────────────────────────────────────────────
 function Field({
-  label, type, name, value, onChange, placeholder, hint, children, maxLength, inputMode, pattern
+  label, type, name, value, onChange, onBlur, placeholder, hint, children, maxLength, inputMode, pattern
 }: {
   label: string; type: string; name: string; value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   placeholder?: string; hint?: string; children?: React.ReactNode;
   maxLength?: number; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
   pattern?: string;
@@ -30,7 +46,7 @@ function Field({
     <div className="flex flex-col gap-1">
       <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">{label}</label>
       <input
-        type={type} name={name} value={value} onChange={onChange}
+        type={type} name={name} value={value} onChange={onChange} onBlur={onBlur}
         placeholder={placeholder} required
         maxLength={maxLength}
         inputMode={inputMode}
@@ -175,7 +191,7 @@ function CollegeInput({ value, onChange }: {
           Loading colleges…
         </div>
       ) : colleges.length === 0 ? (
-        <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-xl px-4 py-3 text-amber-700 text-[13px] font-medium">
+        <div className="w-full bg-[#FFF5E6] border-2 border-[#e8631a]/30 rounded-xl px-4 py-3 text-[#0E1B3D] text-[13px] font-medium">
           No upcoming events found. Signup will open when events are announced.
         </div>
       ) : (
@@ -194,7 +210,7 @@ function CollegeInput({ value, onChange }: {
             className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D] font-bold placeholder-[#0E1B3D]/40 outline-none focus:border-[#e8631a] transition-colors text-[13px] cursor-pointer"
           />
           {query.trim().length > 0 && filtered.length === 0 && (
-            <span className="text-[10px] text-red-500 font-medium ml-1">
+            <span className="text-[10px] text-[#e8631a] font-medium ml-1">
               No matching colleges with upcoming events found.
             </span>
           )}
@@ -293,8 +309,8 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 mb-4 text-sm font-medium">
-            ⚠️ {error}
+          <div className="bg-[#FFF5E6] border border-[#e8631a]/30 text-red-500 rounded-xl px-4 py-3 mb-4 text-sm font-medium flex items-start gap-2">
+            {error}
           </div>
         )}
 
@@ -362,7 +378,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
         {/* Done */}
         {step === 'done' && (
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto text-3xl">✓</div>
+            <div className="w-16 h-16 rounded-full bg-[#0E1B3D]/10 flex items-center justify-center mx-auto text-3xl text-[#e8631a]">✓</div>
             <h2 className="font-extrabold text-xl text-[#0E1B3D]">Password Reset!</h2>
             <p className="text-sm text-[#0E1B3D]/50">You can now sign in with your new password.</p>
             <button onClick={onClose}
@@ -497,7 +513,7 @@ function AuthForms() {
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({
-    name: '', email: '', phone: '', college: '', year: '1', discipline: '', password: ''
+    name: '', email: '', phone: '', college: '', collegeDomain: '', year: '1', discipline: '', password: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
@@ -514,7 +530,14 @@ function AuthForms() {
     const e: Record<string, string> = {};
     if (!signupData.name.trim()) e.name = 'Full name is required.';
     const emailErr = validateEmail(signupData.email);
-    if (emailErr) e.email = emailErr;
+    if (emailErr) {
+      e.email = emailErr;
+    } else if (signupData.email && signupData.collegeDomain) {
+      const emailDomain = signupData.email.split('@')[1]?.toLowerCase();
+      if (emailDomain !== signupData.collegeDomain.toLowerCase()) {
+        e.email = `Email domain must match your college (${signupData.collegeDomain}).`;
+      }
+    }
     const phoneErr = validatePhone(signupData.phone);
     if (phoneErr) e.phone = phoneErr;
     if (!signupData.college.trim()) e.college = 'College name is required.';
@@ -576,25 +599,59 @@ function AuthForms() {
       setSignupSuccess(true);
       setLoginData({ email: signupData.email, password: '' });
       setTab('login');
-      setSignupData({ name: '', email: '', phone: '', college: '', year: '1', discipline: '', password: '' });
+      setSignupData({ name: '', email: '', phone: '', college: '', collegeDomain: '', year: '1', discipline: '', password: '' });
       
     } catch (err: unknown) { setFormError(getErrorMessage(err, 'Signup failed')); }
     finally { setLoading(false); }
   };
 
-  const onLoginChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+  const onLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLoginData({ ...loginData, [e.target.name]: e.target.value });
-  const onSignupChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    if (errors[e.target.name]) setErrors(prev => ({ ...prev, [e.target.name]: '' }));
+  };
+  const onSignupChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setSignupData({ ...signupData, [e.target.name]: e.target.value });
+    if (errors[e.target.name]) setErrors(prev => ({ ...prev, [e.target.name]: '' }));
+  };
 
   // Phone: allow only digits, max 10
   const onPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
     setSignupData(prev => ({ ...prev, phone: val }));
+    if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
+  };
+
+  const handleSignupBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement> | { target: { name: string; value: string } }) => {
+    const { name, value } = e.target;
+    let err = '';
+    
+    if (name === 'name' && !value.trim()) err = 'Full name is required.';
+    if (name === 'college' && !value.trim()) err = 'College name is required.';
+    if (name === 'email') {
+      err = validateEmail(value);
+      if (!err && signupData.collegeDomain) {
+        const emailDomain = value.split('@')[1]?.toLowerCase();
+        if (emailDomain !== signupData.collegeDomain.toLowerCase()) {
+          err = `Email domain must match your college (${signupData.collegeDomain}).`;
+        }
+      }
+    }
+    if (name === 'phone') err = validatePhone(value);
+    if (name === 'discipline' && !value.trim()) err = 'Discipline is required.';
+    if (name === 'password') {
+      if (value.length < 8) err = 'Password must be at least 8 characters.';
+      else if (!/(?=.*[A-Z])/.test(value)) err = 'Password must contain at least one capital letter.';
+      else if (!/(?=.*\d)/.test(value)) err = 'Password must contain at least one number.';
+      else if (!/(?=.*[!@#$%^&*])/.test(value)) err = 'Password must contain at least one special character.';
+    }
+
+    if (err || errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: err }));
+    }
   };
 
   const FieldErr = ({ name }: { name: string }) =>
-    errors[name] ? <span className="text-[11px] text-red-500 font-medium">{errors[name]}</span> : null;
+    errors[name] ? <span className="text-[11px] text-[#e8631a] font-medium">{errors[name]}</span> : null;
 
   return (
     <>
@@ -626,15 +683,15 @@ function AuthForms() {
 
             {/* Success banner after signup */}
             {signupSuccess && tab === 'login' && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 mb-5 text-sm font-medium flex items-start gap-2">
-                <span className="mt-0.5">✅</span> Account created successfully! Please sign in to continue.
+              <div className="text-[#e8631a] px-2 py-2 mb-5 text-sm font-bold flex items-start gap-2">
+                <span className="mt-0.5">✓</span> Account created successfully! Please sign in to continue.
               </div>
             )}
 
             {/* Error banner */}
             {formError && (
-              <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 mb-6 text-sm font-medium flex items-start gap-2">
-                <span className="mt-0.5">⚠️</span>{formError}
+              <div className="bg-[#FFF5E6] border border-[#e8631a]/30 text-red-500 rounded-xl px-4 py-3 mb-6 text-sm font-medium flex items-start gap-2">
+                {formError}
               </div>
             )}
 
@@ -700,19 +757,28 @@ function AuthForms() {
                   {/* Full Name */}
                   <div className="flex flex-col gap-1.5">
                     <Field label="Full Name" type="text" name="name" value={signupData.name}
-                      onChange={onSignupChange} placeholder="Rahul Sharma" />
+                      onChange={onSignupChange} onBlur={handleSignupBlur} placeholder="Rahul Sharma" />
                     <FieldErr name="name" />
                   </div>
 
-                  {/* College Email */}
-                  <div className="flex flex-col gap-1.5">
-                    <Field label="College Email" type="email" name="email" value={signupData.email}
-                      onChange={onSignupChange} placeholder="student@ksrce.ac.in" />
-                    <FieldErr name="email" />
+                  {/* College autocomplete */}
+                  <div className="flex flex-col gap-1.5" onBlur={() => handleSignupBlur({ target: { name: 'college', value: signupData.college } })}>
+                    <CollegeInput value={signupData.college} onChange={(val, domain) => {
+                      setSignupData(p => ({ ...p, college: val, collegeDomain: domain || '' }));
+                      if (errors.college) setErrors(prev => ({ ...prev, college: '' }));
+                    }} />
+                    <FieldErr name="college" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* College Email */}
+                  <div className="flex flex-col gap-1.5">
+                    <Field label="College Email" type="email" name="email" value={signupData.email}
+                      onChange={onSignupChange} onBlur={handleSignupBlur} placeholder="student@college.ac.in" />
+                    <FieldErr name="email" />
+                  </div>
+
                   {/* Phone */}
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">Phone Number</label>
@@ -720,6 +786,7 @@ function AuthForms() {
                       type="tel" name="phone" value={signupData.phone}
                       inputMode="numeric" maxLength={10}
                       onChange={onPhoneChange}
+                      onBlur={handleSignupBlur}
                       onKeyDown={e => {
                         if (!/[0-9]/.test(e.key) && !['Backspace','Delete','Tab','ArrowLeft','ArrowRight'].includes(e.key)) {
                           e.preventDefault();
@@ -728,13 +795,8 @@ function AuthForms() {
                       placeholder="9876543210" required
                       className="w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 text-[#0E1B3D] font-bold placeholder-[#0E1B3D]/30 outline-none focus:border-[#e8631a] transition-colors text-[13px]"
                     />
+                    <span className="text-[10px] text-[#0E1B3D]/50 ml-1 mt-0.5">Enter 10-digit mobile number</span>
                     <FieldErr name="phone" />
-                  </div>
-
-                  {/* College autocomplete */}
-                  <div className="flex flex-col gap-1.5">
-                    <CollegeInput value={signupData.college} onChange={val => setSignupData(p => ({ ...p, college: val }))} />
-                    <FieldErr name="college" />
                   </div>
                 </div>
 
@@ -753,7 +815,7 @@ function AuthForms() {
                   {/* Discipline */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#0E1B3D]/70 ml-1">Discipline</label>
-                    <select name="discipline" value={signupData.discipline} onChange={onSignupChange} required
+                    <select name="discipline" value={signupData.discipline} onChange={onSignupChange} onBlur={handleSignupBlur} required
                       className={`w-full bg-[#F0EBE1] border-2 border-[#E5E7EB]/50 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#e8631a] transition-colors text-[13px] ${!signupData.discipline ? 'text-[#0E1B3D]/40' : 'text-[#0E1B3D]'}`}>
                       <option value="" disabled>Select Discipline</option>
                       <optgroup label="Engineering Students (Core Technical)">
@@ -783,13 +845,13 @@ function AuthForms() {
                 {/* Password */}
                 <div className="flex flex-col gap-1.5">
                   <Field label="Password" type="password" name="password" value={signupData.password}
-                    onChange={onSignupChange} placeholder="Min 8 chars, 1 capital, 1 number, 1 special" />
+                    onChange={onSignupChange} onBlur={handleSignupBlur} placeholder="Min 8 chars, 1 capital, 1 number, 1 special" />
                   {signupData.password && (
                     <div className="flex flex-col gap-1 mt-1 text-[10px] sm:text-[11px] bg-[#0E1B3D]/5 p-2.5 rounded-xl border border-[#0E1B3D]/10">
-                      <span className={signupData.password.length >= 8 ? "text-emerald-600 font-bold" : "text-[#0E1B3D]/60 font-medium"}>{signupData.password.length >= 8 ? "✓" : "○"} At least 8 characters</span>
-                      <span className={/(?=.*[A-Z])/.test(signupData.password) ? "text-emerald-600 font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*[A-Z])/.test(signupData.password) ? "✓" : "○"} One uppercase letter</span>
-                      <span className={/(?=.*\d)/.test(signupData.password) ? "text-emerald-600 font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*\d)/.test(signupData.password) ? "✓" : "○"} One number</span>
-                      <span className={/(?=.*[!@#$%^&*])/.test(signupData.password) ? "text-emerald-600 font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*[!@#$%^&*])/.test(signupData.password) ? "✓" : "○"} One special character (!@#$%^&*)</span>
+                      <span className={signupData.password.length >= 8 ? "text-[#e8631a] font-bold" : "text-[#0E1B3D]/60 font-medium"}>{signupData.password.length >= 8 ? "✓" : "○"} At least 8 characters</span>
+                      <span className={/(?=.*[A-Z])/.test(signupData.password) ? "text-[#e8631a] font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*[A-Z])/.test(signupData.password) ? "✓" : "○"} One uppercase letter</span>
+                      <span className={/(?=.*\d)/.test(signupData.password) ? "text-[#e8631a] font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*\d)/.test(signupData.password) ? "✓" : "○"} One number</span>
+                      <span className={/(?=.*[!@#$%^&*])/.test(signupData.password) ? "text-[#e8631a] font-bold" : "text-[#0E1B3D]/60 font-medium"}>{/(?=.*[!@#$%^&*])/.test(signupData.password) ? "✓" : "○"} One special character (!@#$%^&*)</span>
                     </div>
                   )}
                   <FieldErr name="password" />

@@ -253,26 +253,8 @@ function MediaTab({ eventId, token }: { eventId: string, token: string }) {
           <div className="flex flex-col gap-5 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
               <div>
-                <h3 className="font-extrabold text-xl text-[#0E1B3D]">Feedback Curation Studio</h3>
+                <h3 className="font-extrabold text-xl text-[#0E1B3D]">Feedback</h3>
                 <p className="text-sm text-gray-500 mt-1">Choose which student quotes appear on the landing page and which stay exclusive to this event page.</p>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Collected</p>
-                  <p className="mt-1 text-2xl font-extrabold text-[#0E1B3D]">{feedbackStats.total}</p>
-                </div>
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600/70">Landing</p>
-                  <p className="mt-1 text-2xl font-extrabold text-emerald-700">{feedbackStats.landing}</p>
-                </div>
-                <div className="rounded-2xl border border-[#0E1B3D]/10 bg-[#0E1B3D]/5 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#0E1B3D]/55">Event Page</p>
-                  <p className="mt-1 text-2xl font-extrabold text-[#0E1B3D]">{feedbackStats.eventPage}</p>
-                </div>
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700/70">Hidden</p>
-                  <p className="mt-1 text-2xl font-extrabold text-amber-700">{feedbackStats.hidden}</p>
-                </div>
               </div>
             </div>
             <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
@@ -284,7 +266,7 @@ function MediaTab({ eventId, token }: { eventId: string, token: string }) {
                   value={feedbackQuery}
                   onChange={e => setFeedbackQuery(e.target.value)}
                   placeholder="Search by student, college, or quote..."
-                  className="w-full rounded-2xl border border-gray-200 bg-white pl-10 pr-4 py-3 text-sm outline-none focus:border-[#C84B11]"
+                  className="w-full rounded-2xl border border-gray-200 bg-white pl-10 pr-4 py-3 text-sm text-[#1C1A17] placeholder-gray-400 outline-none focus:border-[#C84B11]"
                 />
               </div>
               <div className="flex flex-wrap gap-2">

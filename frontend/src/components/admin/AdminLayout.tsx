@@ -29,20 +29,17 @@ export default function AdminLayout({
     { href: '/admin', label: 'Dashboard', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
     ) },
-    { href: '/admin/checkin', label: 'Secure Scanner', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 3H5a2 2 0 00-2 2v2m16-4h-2m2 0a2 2 0 012 2v2M3 17v2a2 2 0 002 2h2m12-4v2a2 2 0 01-2 2h-2M8 8h8v8H8z" /></svg>
-    ) },
     { href: '/admin/create-event', label: 'Create Event', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-    ) },
-    { href: '/admin/ai-studio', label: 'AI Studio', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
     ) },
     { href: '/admin/events', label: 'All Events', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
     ) },
-    { href: '#', label: 'Settings', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+    { href: '/admin/registrations', label: 'Registrations', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+    ) },
+    { href: '/admin/checkin', label: 'Secure Scanner', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 3H5a2 2 0 00-2 2v2m16-4h-2m2 0a2 2 0 012 2v2M3 17v2a2 2 0 002 2h2m12-4v2a2 2 0 01-2 2h-2M8 8h8v8H8z" /></svg>
     ) },
   ];
 
@@ -63,8 +60,7 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="flex h-screen bg-[#0E1B3D] text-white font-body selection:bg-[#C84B11] selection:text-white">
-      <style dangerouslySetInnerHTML={{__html: "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Syne:wght@800&display=swap');"}}/>
+    <div className="flex h-screen bg-[#0E1B3D] text-white selection:bg-[#C84B11] selection:text-white font-sans">
       {/* Mobile Backdrop */}
       {sidebarOpen && (
         <div 
@@ -85,7 +81,7 @@ export default function AdminLayout({
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/></svg>
             </div>
             <div className="flex flex-col">
-              <p className="text-white text-[22px] font-heading font-extrabold tracking-widest leading-none mb-1">TechTrek</p>
+              <p className="text-white text-[22px] font-extrabold tracking-widest leading-none mb-1">TechTrek</p>
               <p className="text-[#C84B11] text-[9px] font-bold uppercase tracking-[0.15em]">GKT Command Center</p>
             </div>
           </div>
@@ -138,7 +134,7 @@ export default function AdminLayout({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden bg-[#FAF7F2]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden bg-[#FAF7F2] font-sans">
         {/* Responsive Header */}
         <header className="bg-[#FAF7F2]/80 backdrop-blur-md border-b border-[#E2D8CC] shrink-0 sticky top-0 z-10 py-6 min-h-[88px] flex items-center">
           <div className="px-4 sm:px-6 lg:px-8 w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -156,8 +152,8 @@ export default function AdminLayout({
                   </Link>
                 )}
                 <div>
-                  <div className="text-[22px] text-[#1C1A17] leading-none truncate" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800 }}>{title || 'Dashboard'}</div>
-                  {title === 'Dashboard' && <p className="text-[#7A7166] tracking-wide text-xs mt-1.5 font-bold font-[DM_Sans] select-none uppercase">Welcome back, {user?.name?.split(' ')[0]}</p>}
+                  <div className="text-[22px] font-bold text-[#1C1A17] leading-tight truncate">{title || 'Dashboard'}</div>
+                  {title === 'Dashboard' && <p className="text-[#7A7166] tracking-wide text-xs mt-1.5 font-medium select-none uppercase">Welcome back, {user?.name?.split(' ')[0]}</p>}
                 </div>
               </div>
             </div>
